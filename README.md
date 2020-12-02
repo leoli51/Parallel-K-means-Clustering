@@ -2,6 +2,10 @@
 
 ## conventions
 
+Usiamo lo stile di MPI per le funzioni (?):
+tutte le funzioni restituiscono un intero che rappresenta lo stato 
+i parametri che devono essere modificati vengono passati come pointer
+
 Camel case metodi: parseFile();
 Snake case variabili: raw_data_point;
 
@@ -9,9 +13,7 @@ nomi descrittivi
 
 ## datatypes
 
-numero attributi : int
 numero cluster : int
-numero data point : int
 [numero massimo iterazioni : int]
 
 struct cluster-data-point
