@@ -7,6 +7,7 @@
 #include <mpi.h>
 //#include <omp.h> TODO: uncomment
 #include "KMeansClusteringDefs.h"
+#include "KMeansMPIUtils.h"
 
 int main(int argc, char** argv){
     // Standard MPI code
@@ -23,16 +24,17 @@ int main(int argc, char** argv){
     int attributes_size;
     int clusters_size; // how many clusters.. TODO: change "size" to more clear name
     int max_iterations; 
-    int my_data_points_size;
+    int data_points_per_process;
 
     Cluster* clusters;
     ClusterDataPoint* my_data_points;
+    RawDataPoint* data_points;
+    RawDataPoint* my_data_points
 
     if (my_rank == 0){
         // parse file
         char* filename;
-        RawDataPoint* data_points;
-
+        
         parseArgs(argc, argv, &filename, &clusters_size, &max_iterations);
         parseFile(filename, &data_points_size, &attributes_size, &data_points);
 
@@ -42,10 +44,37 @@ int main(int argc, char** argv){
             clusters[i].cluster_id = i;
             clusters[i].centroid = data_points[i]; // Warning: This line of code probably doesnt work
         }
+    }
+
+    // send/receive information to create datatypes
+    int information_buffer[5] = {data_points_size, my_data_points_size, attributes_size, clusters_size, max_iterations};
+    MPI_Bcast(information_buffer, 5, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // copy values from buffer to vars
+    if (my_rank != 0){
+        data_points_size = information_buffer[0];
+        my_data_points_size = information_buffer[1];
+        attributes_size = information_buffer[2];
+        clusters_size = information_buffer[3];
+        max_iterations = information_buffer[4];
+
+        my_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * my_data_points_size);
+    }
+
+    // create MPI datatype
+    MPI_Datatype mpi_raw_point_type;
+    createMPIRawDataPoint(&mpi_raw_point_type, attributes_size);
+
+    MPI_Scatter(data_points, data_points_per_process, );
+
+    // TODO: handle non int divisible data
+    if (my_rank == 0){
         // send data
+        MPI_SCatte
     }
     else {
         // receive data
+        MPI_Scatter();
     }
 
     // do work
