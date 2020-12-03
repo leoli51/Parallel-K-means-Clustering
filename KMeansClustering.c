@@ -75,7 +75,7 @@ int parseArgs(int argc, char** argv, char** filename, int* clusters_size, int* m
   *filename = argv[1];
   *clusters_size = atoi(argv[2]);
 
-  if(argc == 3) &max_iterations = -1;
+  if(argc == 3) *max_iterations = -1;
   else
    {
      int max = atoi(argv[3]); 
