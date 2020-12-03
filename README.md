@@ -6,8 +6,8 @@ Usiamo lo stile di MPI per le funzioni (?):
 tutte le funzioni restituiscono un intero che rappresenta lo stato 
 i parametri che devono essere modificati vengono passati come pointer
 
-Camel case metodi: parseFile();
-Snake case variabili: raw_data_point;
+Camel case metodi: parseFile();<br>
+Snake case variabili: raw_data_point;<br>
 
 nomi descrittivi
 
@@ -58,3 +58,7 @@ Distribuisce come array di raw-data-points.
 
 Ogni macchina analizza la sua parte di data-points e assegna un cluster a ciascuno. 
 Ottimizzazioe locale con openMP / PThread.
+
+## 5 
+
+Calcolo centroide locale 
