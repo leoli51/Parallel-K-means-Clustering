@@ -2,6 +2,7 @@
 #ifndef K_MEANS_DATATYPES
 #define K_MEANS_DATATYPES
 
+#define MAX_INTEGER_LENGTH 10
 #define DEBUG 1
 
 typedef struct {

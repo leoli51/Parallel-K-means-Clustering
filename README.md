@@ -40,8 +40,8 @@ struct cluster
 
 ## 1
 
-linee contenenti attributi separati da spazi.
-Ogni linea è un data point.
+Prima linea: numero_di_data_point numero_di_attributi
+Altre linee: linee contenenti attributi separati da spazi. Ogni linea è un data point.
 
 Master esegue il parsing del file.
 
