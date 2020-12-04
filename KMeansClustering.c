@@ -19,11 +19,11 @@ int main(int argc, char** argv){
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
     // K-means
-    int data_points_size;
-    int attributes_size;
-    int clusters_size; // how many clusters.. TODO: change "size" to more clear name
+    int num_data_points;
+    int num_attributes;
+    int num_clusters;
     int max_iterations; 
-    int my_data_points_size;
+    int my_data_points_num;
 
     Cluster* clusters;
     ClusterDataPoint* my_data_points;
@@ -33,12 +33,15 @@ int main(int argc, char** argv){
         char* filename;
         RawDataPoint* data_points;
 
-        parseArgs(argc, argv, &filename, &clusters_size, &max_iterations);
-        parseFile(filename, &data_points_size, &attributes_size, &data_points);
+        parseArgs(argc, argv, &filename, &num_clusters, &max_iterations);
+        parseFile(filename, &num_data_points, &num_attributes, &data_points);
+
+        //TODO mettere parseArgs e parseFile prima di MPI_Init per non creare nulla se la condizione sotto non è soddisfatta (?)
+	//TODO check that 1 < num_clusters < num_attributes and if so, return error
 
         // initialize clusters
-        clusters = (Cluster*) malloc(sizeof(Cluster) * clusters_size);
-        for (int i = 0; i < clusters_size; i++){
+        clusters = (Cluster*) malloc(sizeof(Cluster) * num_clusters);
+        for (int i = 0; i < num_clusters; i++){
             clusters[i].cluster_id = i;
             clusters[i].centroid = data_points[i]; // Warning: This line of code probably doesnt work
         }
