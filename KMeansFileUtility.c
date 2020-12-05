@@ -1,4 +1,5 @@
 
+#include "KMeansFileUtility.h"
 /**
 function that parses the input arguments in:
 -filename, the filename of the file where the data_points are defined

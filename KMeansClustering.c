@@ -93,6 +93,7 @@ int main(int argc, char** argv){
     int num_data_points_per_worker = num_data_points / (communicator_size - 1);
     int num_data_points_per_master = num_data_points % (communicator_size - 1);
 
+    // send 
     // how many raw data points should each process receive
     int* send_receive_count_buffer = (int*) malloc(sizeof(int) * communicator_size);
     send_receive_count_buffer[0] = num_data_points_per_master;
