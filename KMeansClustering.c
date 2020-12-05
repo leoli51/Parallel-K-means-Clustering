@@ -29,7 +29,7 @@ int main(int argc, char** argv){
     Cluster* clusters;
     ClusterDataPoint* my_data_points;
     RawDataPoint* data_points;
-    RawDataPoint* my_data_points
+    RawDataPoint* my_raw_data_points
 
     if (my_rank == 0){
         // parse file
@@ -37,13 +37,6 @@ int main(int argc, char** argv){
         
         parseArgs(argc, argv, &filename, &clusters_size, &max_iterations);
         parseFile(filename, &data_points_size, &attributes_size, &data_points);
-
-        // initialize clusters
-        clusters = (Cluster*) malloc(sizeof(Cluster) * clusters_size);
-        for (int i = 0; i < clusters_size; i++){
-            clusters[i].cluster_id = i;
-            clusters[i].centroid = data_points[i]; // Warning: This line of code probably doesnt work
-        }
     }
 
     // send/receive information to create datatypes
@@ -53,32 +46,65 @@ int main(int argc, char** argv){
     // copy values from buffer to vars
     if (my_rank != 0){
         data_points_size = information_buffer[0];
-        my_data_points_size = information_buffer[1];
+        data_points_per_process = information_buffer[1];
         attributes_size = information_buffer[2];
         clusters_size = information_buffer[3];
         max_iterations = information_buffer[4];
 
-        my_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * my_data_points_size);
+        my_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * data_points_per_process);
     }
 
     // create MPI datatype
     MPI_Datatype mpi_raw_point_type;
     createMPIRawDataPoint(&mpi_raw_point_type, attributes_size);
+    MPI_Type_commit(mpi_raw_point_type);
 
-    MPI_Scatter(data_points, data_points_per_process, );
+    
+    // initialize clusters
+    clusters = (Cluster*) malloc(sizeof(Cluster) * clusters_size);
+    for (int i = 0; i < clusters_size; i++){
+        clusters[i].cluster_id = i;
+    }
+
+    // initialize cluster buffer
+    float** cluster_buffer = (float**) malloc(clusters_size*sizeof(float*));
+    for (int i = 0; i < clusters_size; i++){
+        cluster_buffer[i] = (float*) malloc(sizeof(float) * attributes_size);
+        if (my_rank == 0)
+          memcpy(cluster_buffer[i], data_points[i].attributes, sizeof(float) * attributes_size); 
+    }
+
+    // send/receive cluster information
+    MPI_Bcast(cluster_buffer, clusters_size, mpi_raw_point_type, 0, MPI_COMM_WORLD);
+
+    // assign buffer attributes to cluster struct
+    for (int i = 0; i < clusters_size; i++){
+        clusters[i].centroid.attributes = cluster_buffer[i];
+    }
+
+    #if DEBUG
+    printf("Rank:%d, Clusters:\n");
+    for (int i = 0; i < clusters_size; i++){
+      printf("Cluster %d: ", clusters[i].cluster_id);
+      for (int j = 0; j < attributes_size; j++)
+        printf("%f", clusters[i].centroid.attributes[j]);
+      printf("\n");
+    }
+    #endif
+
+    // send data points
+    //MPI_Scatter(data_points, data_points_per_process, );
 
     // TODO: handle non int divisible data
-    if (my_rank == 0){
-        // send data
-        MPI_SCatte
-    }
-    else {
-        // receive data
-        MPI_Scatter();
-    }
 
     // do work
 
+    // free cluster memory
+    for (int i = 0; i < clusters_size; i++)
+      free(clusters[i].attributes);
+    free(clusters);
+
+    // free data points.
 
     MPI_Finalize();
     return 0; // Return correct status 
