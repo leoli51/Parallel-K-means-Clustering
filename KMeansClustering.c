@@ -23,34 +23,32 @@ int main(int argc, char** argv){
     int num_attributes;
     int num_clusters;
     int max_iterations; 
-    int my_data_points_num;
+
 
     Cluster* clusters;
     ClusterDataPoint* my_data_points;
-    RawDataPoint* data_points;
-    RawDataPoint* my_raw_data_points
+    RawDataPoint* raw_data_points;
+    RawDataPoint* my_raw_data_points;
+    int num_my_data_points;
 
     if (my_rank == 0){
         // parse file
         char* filename;
         
         parseArgs(argc, argv, &filename, &clusters_size, &max_iterations);
-        parseFile(filename, &data_points_size, &attributes_size, &data_points);
+        parseFile(filename, &data_points_size, &attributes_size, &raw_data_points);
     }
 
     // send/receive information to create datatypes
-    int information_buffer[5] = {data_points_size, my_data_points_size, attributes_size, clusters_size, max_iterations};
-    MPI_Bcast(information_buffer, 5, MPI_INT, 0, MPI_COMM_WORLD);
+    int information_buffer[4] = {data_points_size, attributes_size, clusters_size, max_iterations};
+    MPI_Bcast(information_buffer, 4, MPI_INT, 0, MPI_COMM_WORLD);
 
     // copy values from buffer to vars
     if (my_rank != 0){
-        data_points_size = information_buffer[0];
-        data_points_per_process = information_buffer[1];
-        attributes_size = information_buffer[2];
-        clusters_size = information_buffer[3];
-        max_iterations = information_buffer[4];
-
-        my_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * data_points_per_process);
+        num_data_points = information_buffer[0];
+        num_attributes = information_buffer[1];
+        num_clusters = information_buffer[2];
+        max_iterations = information_buffer[3];
     }
 
     // create MPI datatype
@@ -70,7 +68,7 @@ int main(int argc, char** argv){
     for (int i = 0; i < clusters_size; i++){
         cluster_buffer[i] = (float*) malloc(sizeof(float) * attributes_size);
         if (my_rank == 0)
-          memcpy(cluster_buffer[i], data_points[i].attributes, sizeof(float) * attributes_size); 
+          memcpy(cluster_buffer[i], raw_data_points[i].attributes, sizeof(float) * attributes_size); 
     }
 
     // send/receive cluster information
@@ -92,9 +90,40 @@ int main(int argc, char** argv){
     #endif
 
     // send data points
-    //MPI_Scatter(data_points, data_points_per_process, );
+    int num_data_points_per_worker = num_data_points / (communicator_size - 1);
+    int num_data_points_per_master = num_data_points % (communicator_size - 1);
 
-    // TODO: handle non int divisible data
+    // how many raw data points should each process receive
+    int* send_receive_count_buffer = (int*) malloc(sizeof(int) * communicator_size);
+    send_receive_count_buffer[0] = num_data_points_per_master;
+    for (int i = 1; i < communicator_size; i++){
+      send_receive_count_buffer[i] = num_data_points_per_worker;
+    }
+
+    // set displacements of data points for each process
+    MPI_Aint* displacements_buffer = (MPI_AINT*) malloc(sizeof(MPI_AINT) * communicator_size);
+    MPI_Aint start_address;
+    MPI_Get_address(raw_data_points[0], &start_address);
+    int offset_index = 0;
+    for (int i = 0; i < communicator_size; i++){
+      MPI_Aint current_address;
+      MPI_Get_address(raw_data_points[offset_index], &current_address);
+      displacements_buffer[i] = current_address - start_address;
+      offset_index += send_receive_count_buffer[i];
+    }
+
+    // prepare receive buffer
+    my_raw_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * send_receive_count_buffer[my_rank]);
+
+    MPI_Scatterv(raw_data_points, send_receive_count_buffer, displacements_buffer, mpi_raw_point_type, 
+                 my_raw_data_points, send_receive_buffer[my_rank], mpi_raw_data_point_type, 0, MPI_COMM_WORLD);
+
+    #if DEBUG
+    printf("Rank: %d, Received: %d", my_rank, num_my_data_points);
+    #endif
+
+    free(send_receive_count_buffer);
+    free(displacements_buffer);
 
     // do work
 
@@ -105,114 +134,8 @@ int main(int argc, char** argv){
 
     // free data points.
 
+
     MPI_Finalize();
     return 0; // Return correct status 
 }
 
-/**
-function that parses the input arguments in:
--filename, the filename of the file where the data_points are defined
--clusters_size, the number of cluster to create
--max_iterations, if defined by the user is the maximum number of iterations of the alghoritm, otherwise is NULL
-
-The function returns:
--1 if there was an error in parsing the arguments
-0 otherwise.
-**/ 
-int parseArgs(int argc, char** argv, char** filename, int* clusters_size, int* max_iterations)
-{
-  if(argc<3)
-    {
-      printf("Usage of k-means: ./kmeans filename clusters_size [max_iterations]\n");
-      return -1;
-    }
-  *filename = argv[1];
-  *clusters_size = atoi(argv[2]);
-
-  if(argc == 3) *max_iterations = -1;
-  else
-   {
-     int max = atoi(argv[3]); 
-     max_iterations = &max;
-   }
-  return 0;
-}
-
-/**
-function that reads the line of the file pointed by "file" and put it in "line"
-returns 0 on success, -1 otherwise
-**/
-int readLine(FILE* file, char* line)
-{
- char read_char,*pointer = line;
- do
- {
-   read_char = (char) fgetc(file);
-   if(read_char != '\n' && read_char != EOF)
-   	*pointer++ = read_char;
-   else if(read_char == EOF) return -1;
-   else break;
- }while(1);
- return 0;
-}
-
-/**
-function that parses a formatted file to get:
--data_points_size: the pointer to the number of data_points
--attributes_size : the pointer to the number of attributes of each data_point
--array_of_datapoints: which is an array of the data_points that are going to be divided in the clusters
-
-The function returns:
--1 if there was an error in parsing the file
-0 otherwise
-**/
-int parseFile(const char* filename,int* data_points_size, int* attributes_size, RawDataPoint** array_of_datapoints)
-{
-  FILE *file = fopen(filename,"r");
-  char read_char;
-  if(file == NULL)
-   {
-     printf("There was an error in trying to open the file\n");
-     return -1;
-   }
-  char* firstRowBuffer = malloc(sizeof(char)*((MAX_INTEGER_LENGTH*2)+2));
-  if(readLine(file,firstRowBuffer) == -1)
-   {
-    printf("In parseFile() error reading the file\n");
-   }
-  *data_points_size = atoi(strtok(firstRowBuffer," "));
-  *attributes_size = atoi(strtok(NULL," "));
-  free(firstRowBuffer);
-  int max_line_len = sizeof(char) * ((MAX_INTEGER_LENGTH*(*attributes_size))+(*attributes_size));
-  char* line = malloc(max_line_len),*token;
-  RawDataPoint *data_points = malloc(sizeof(RawDataPoint)*(*attributes_size));
-  for(int i = 0; i < (*data_points_size); i++)
-   {
-     line = (char*) memset(line,0,max_line_len);
-     if(readLine(file,line) == -1)
-   	{
-   	 printf("In parseFile() error reading %d line of the file\n",i+2);
-   	 return -1;
-  	}
-     data_points[i].attributes = malloc(sizeof(float)*(*attributes_size));
-     for(int j = 0; j < (*attributes_size); j++)
-      {
-        if(j == 0) token = strtok(line," ");
-        else token = strtok(NULL," ");
-        if(token == NULL)
-         {
-           printf("Error in parsing the file, the number of attributes given exceed the real attributes defined\n");
-           return -1;
-         }
-        data_points[i].attributes[j] = (float) atof(token);
-      }
-   }
-  free(line);
-  *array_of_datapoints = data_points;
-  if(fclose(file) == EOF)
-   {
-     printf("There was an error in trying to close the file\n");
-     return -1;
-   }
- return 0;
-}

@@ -20,13 +20,9 @@ typedef struct {
 } Cluster;
 
 
-// parsing prototypes
-int parseArgs(int argc, char** argv, char** filename, int* clusters_size, int* max_iterations);
-int parseFile(const char* filename,int* data_points_size, int* attributes_size, RawDataPoint** array_of_datapoints);
-
 // k-means prototype
-int assignPointsToNearestCluster(...);
-int updateClusters(...);
-...
+//int assignPointsToNearestCluster(...);
+//int updateClusters(...);
+
 
 #endif /* !K_MEANS_DATATYPES */
