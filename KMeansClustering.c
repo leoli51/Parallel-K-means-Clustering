@@ -7,7 +7,6 @@
 #include <mpi.h>
 //#include <omp.h> TODO: uncomment
 #include "KMeansClusteringDefs.h"
-#include "KMeansMPIUtils.h"
 
 int main(int argc, char** argv){
     // Standard MPI code
@@ -20,11 +19,11 @@ int main(int argc, char** argv){
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
     // K-means
-    int data_points_size;
-    int attributes_size;
-    int clusters_size; // how many clusters.. TODO: change "size" to more clear name
+    int num_data_points;
+    int num_attributes;
+    int num_clusters;
     int max_iterations; 
-    int data_points_per_process;
+    int my_data_points_num;
 
     Cluster* clusters;
     ClusterDataPoint* my_data_points;
@@ -149,9 +148,9 @@ int readLine(FILE* file, char* line)
  do
  {
    read_char = (char) fgetc(file);
-   printf("letto %c\n",read_char);
    if(read_char != '\n' && read_char != EOF)
-   	{ *pointer++ = read_char; printf("bf is %s\n",line); }
+   	*pointer++ = read_char;
+   else if(read_char == EOF) return -1;
    else break;
  }while(1);
  return 0;
@@ -185,19 +184,27 @@ int parseFile(const char* filename,int* data_points_size, int* attributes_size, 
   *attributes_size = atoi(strtok(NULL," "));
   free(firstRowBuffer);
   int max_line_len = sizeof(char) * ((MAX_INTEGER_LENGTH*(*attributes_size))+(*attributes_size));
-  char* line = malloc(max_line_len);
+  char* line = malloc(max_line_len),*token;
   RawDataPoint *data_points = malloc(sizeof(RawDataPoint)*(*attributes_size));
   for(int i = 0; i < (*data_points_size); i++)
    {
+     line = (char*) memset(line,0,max_line_len);
      if(readLine(file,line) == -1)
    	{
-   	 printf("In parseFile() error reading %d line of the file\n",i+1);
+   	 printf("In parseFile() error reading %d line of the file\n",i+2);
+   	 return -1;
   	}
      data_points[i].attributes = malloc(sizeof(float)*(*attributes_size));
      for(int j = 0; j < (*attributes_size); j++)
       {
-        if(j == 0) data_points[i].attributes[j] = (float) atof(strtok(line," "));
-        else data_points[i].attributes[j] = (float) atof(strtok(NULL," "));
+        if(j == 0) token = strtok(line," ");
+        else token = strtok(NULL," ");
+        if(token == NULL)
+         {
+           printf("Error in parsing the file, the number of attributes given exceed the real attributes defined\n");
+           return -1;
+         }
+        data_points[i].attributes[j] = (float) atof(token);
       }
    }
   free(line);
@@ -207,4 +214,5 @@ int parseFile(const char* filename,int* data_points_size, int* attributes_size, 
      printf("There was an error in trying to close the file\n");
      return -1;
    }
+ return 0;
 }
