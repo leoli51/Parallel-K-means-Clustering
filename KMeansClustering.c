@@ -93,7 +93,6 @@ int main(int argc, char** argv){
     int num_data_points_per_worker = num_data_points / (communicator_size - 1);
     int num_data_points_per_master = num_data_points % (communicator_size - 1);
 
-    // send 
     // how many raw data points should each process receive
     int* send_receive_count_buffer = (int*) malloc(sizeof(int) * communicator_size);
     send_receive_count_buffer[0] = num_data_points_per_master;
@@ -101,32 +100,49 @@ int main(int argc, char** argv){
       send_receive_count_buffer[i] = num_data_points_per_worker;
     }
 
+    // data points send buffer
+    float** data_points_send_buffer = NULL;
+    if (my_rank == 0){
+      data_points_send_buffer = (float**) malloc((sizeof(float*) * num_data_points));
+      for (int i = 0; i < num_data_points; i++){
+        data_points_send_buffer[i] = raw_data_points[i].attributes;
+      }
+    } 
+
+    // data points receive buffer
+    my_raw_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * send_receive_count_buffer[my_rank]);
+    float** data_points_receive_buffer = (float**) malloc(sizeof(float*) * send_receive_count_buffer[my_rank]);
+    for (int i = 0; i < send_receive_count_buffer[my_rank]; i++){
+      data_points_receive_buffer[i] = my_raw_data_points[i].attributes;
+    }
+   
+
     // set displacements of data points for each process
     MPI_Aint* displacements_buffer = (MPI_AINT*) malloc(sizeof(MPI_AINT) * communicator_size);
     MPI_Aint start_address;
-    MPI_Get_address(raw_data_points[0], &start_address);
+    MPI_Get_address(data_points_send_buffer[0], &start_address);
     int offset_index = 0;
     for (int i = 0; i < communicator_size; i++){
       MPI_Aint current_address;
-      MPI_Get_address(raw_data_points[offset_index], &current_address);
+      MPI_Get_address(data_points_send_buffer[offset_index], &current_address);
       displacements_buffer[i] = current_address - start_address;
       offset_index += send_receive_count_buffer[i];
     }
 
-    // prepare receive buffer
-    my_raw_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * send_receive_count_buffer[my_rank]);
-
-    MPI_Scatterv(raw_data_points, send_receive_count_buffer, displacements_buffer, mpi_raw_point_type, 
-                 my_raw_data_points, send_receive_buffer[my_rank], mpi_raw_data_point_type, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(data_points_send_buffer, send_receive_count_buffer, displacements_buffer, mpi_raw_point_type, 
+                 data_points_receive_buffer, send_receive_buffer[my_rank], mpi_raw_data_point_type, 0, MPI_COMM_WORLD);
 
     #if DEBUG
     printf("Rank: %d, Received: %d", my_rank, num_my_data_points);
     #endif
 
+    free(data_points_receive_buffer);
+    free(data_points_send_buffer);
     free(send_receive_count_buffer);
     free(displacements_buffer);
 
     // do work
+
 
     // free cluster memory
     for (int i = 0; i < clusters_size; i++)
