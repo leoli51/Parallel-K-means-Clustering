@@ -1,5 +1,6 @@
 
 #include "KMeansFileUtility.h"
+
 /**
 function that parses the input arguments in:
 -filename, the filename of the file where the data_points are defined
@@ -9,7 +10,7 @@ function that parses the input arguments in:
 The function returns:
 -1 if there was an error in parsing the arguments
 0 otherwise.
-**/ 
+**/
 int parseArgs(int argc, char** argv, char** filename, int* clusters_size, int* max_iterations)
 {
   if(argc<3)
@@ -23,7 +24,7 @@ int parseArgs(int argc, char** argv, char** filename, int* clusters_size, int* m
   if(argc == 3) *max_iterations = -1;
   else
    {
-     int max = atoi(argv[3]); 
+     int max = atoi(argv[3]);
      max_iterations = &max;
    }
   return 0;
