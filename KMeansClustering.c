@@ -53,7 +53,7 @@ int main(int argc, char** argv){
         num_clusters = information_buffer[2];
         max_iterations = information_buffer[3];
     }
-
+    
     // create MPI datatype
     MPI_Datatype mpi_raw_point_type;
     buildMPIRawDataPointType(&mpi_raw_point_type, num_attributes);
