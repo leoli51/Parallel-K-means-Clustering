@@ -21,7 +21,7 @@ typedef struct {
 
 
 // k-means prototype
-int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int attributes_size,int my_raw_data_num,int num_clusters);
+int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters);
 //int updateClusters(...);
 
 
