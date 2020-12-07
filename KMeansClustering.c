@@ -157,3 +157,20 @@ int main(int argc, char** argv){
     MPI_Finalize();
     return 0; // Return correct status
 }
+
+int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int attributes_size,int my_raw_data_num,int num_clusters) //TODO continue...
+{
+  int i,j,distance,min_distance;
+  ClusterDataPoint point;
+  Cluster cluster;
+  #pragma omp parallel for
+  for(i = 0; i < my_raw_data_num; i++)
+   {
+     point = my_raw_data[i];
+     for(j = 0; j < num_clusters; j++)
+      {
+        cluster = clusters[j];
+        
+      }
+   }
+}
