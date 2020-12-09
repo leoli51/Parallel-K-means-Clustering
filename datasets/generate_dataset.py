@@ -21,7 +21,7 @@ def main():
         for i in range(args.point_count):
             line = ''
             for ai in range(args.attributes_count):
-                line += str(random.random()) + ' '
+                line += '{:.3f} '.format(random.random())
             line += '\n'
             file.write(line)
 

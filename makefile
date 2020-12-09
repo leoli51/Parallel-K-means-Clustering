@@ -1,7 +1,7 @@
 run = mpirun
 compiler = mpicc
 target = kmeans.o
-processes = 10
+processes = 3
 src=$(wildcard *.c)
 libs  = #-lkernel32 -luser32 -lgdi32 -lopengl32
 cflags = #-Wall
