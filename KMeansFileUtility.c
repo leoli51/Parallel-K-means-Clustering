@@ -77,7 +77,7 @@ int parseFile(const char* filename,int* data_points_size, int* attributes_size, 
   free(firstRowBuffer);
   int max_line_len = sizeof(char) * ((MAX_INTEGER_LENGTH*(*attributes_size))+(*attributes_size));
   char* line = malloc(max_line_len),*token;
-  RawDataPoint *data_points = malloc(sizeof(RawDataPoint)*(*attributes_size));
+  RawDataPoint *data_points = malloc(sizeof(RawDataPoint)*(*data_points_size));
   for(int i = 0; i < (*data_points_size); i++)
    {
      line = (char*) memset(line,0,max_line_len);

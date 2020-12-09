@@ -8,6 +8,7 @@
 #include "mpi.h"
 //#include <omp.h> TODO: uncomment
 #include "KMeansClusteringDefs.h"
+#include "KMeansFileUtility.h"
 #include "KMeansMPIUtils.h"
 
 #include <unistd.h>
@@ -235,4 +236,34 @@ int main(int argc, char** argv){
 
     MPI_Finalize();
     return 0; // Return correct status
+}
+
+int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters)
+{
+  int i,j,n_attr,cluster_index;
+  float distance,min_distance,temp;
+  ClusterDataPoint point;
+  Cluster cluster;
+  #pragma omp parallel for
+  for(i = 0; i < my_raw_data_num; i++) //for every point to analyze
+   {
+     point = my_raw_data[i]; //take a point
+     for(j = 0; j < num_clusters; j++) //for every cluster
+      {
+        distance = 0;
+        cluster = clusters[j]; //take a cluster
+ 	for(n_attr = 0; n_attr < num_attributes; n_attr++) //calculate the distance between the point and the cluster
+ 	 {
+ 	   temp = (point.data_point.attributes[n_attr] - cluster.centroid.attributes[n_attr]);
+ 	   distance += temp * temp;
+ 	 }
+ 	if(j == 0 || distance < min_distance) //if it is the first cluster or it is the nearest up to now
+ 	{
+ 	  min_distance = distance; //consider it as the nearest
+ 	  cluster_index = j;
+ 	}
+      }
+     point.cluster_id = cluster_index; //assign the nearest cluster to the point
+   }
+  return 0;
 }
