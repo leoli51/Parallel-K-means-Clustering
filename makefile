@@ -5,8 +5,8 @@ processes = 3
 src=$(wildcard *.c)
 libs  = #-lkernel32 -luser32 -lgdi32 -lopengl32
 cflags = #-Wall
-filename = datasets/test_dataset.txt
-num_clusters = 3
+filename = datasets/test_dataset2.txt
+num_clusters = 2
 
 .PHONY : clean
 
