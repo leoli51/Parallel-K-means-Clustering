@@ -45,21 +45,10 @@ int main(int argc, char** argv){
 
     }
 
-    #if DEBUG
-    if (my_rank == 0)
-        printPoints(raw_data_points, num_data_points, num_attributes);
-    #endif
 
     // send/receive information to create datatypes
     int information_buffer[4] = {num_data_points, num_attributes, num_clusters, max_iterations};
     MPI_Bcast(information_buffer, 4, MPI_INT, 0, MPI_COMM_WORLD);
-
-    #if DEBUG
-    if (my_rank == 0){
-        printf("%d %d\n", num_data_points, num_attributes);
-        printPoints(raw_data_points, num_data_points, num_attributes);
-    }
-    #endif
 
     // copy values from buffer to vars
     if (my_rank != 0){
@@ -92,17 +81,7 @@ int main(int argc, char** argv){
     buildMPIPointBufferType(&mpi_cluster_buffer_type, num_attributes, cluster_buffer[1] - cluster_buffer[0], num_clusters);
     MPI_Type_commit(&mpi_cluster_buffer_type);
 
-    #if DEBUG
-    if (my_rank == 0)
-        printPoints(raw_data_points, num_data_points, num_attributes);
-    #endif
-
     MPI_Bcast(*cluster_buffer, 1, mpi_cluster_buffer_type, 0, MPI_COMM_WORLD);
-
-    #if DEBUG
-    if (my_rank == 0)
-        printPoints(raw_data_points, num_data_points, num_attributes);
-    #endif
 
     // assign buffer attributes to cluster struct
     for (int i = 0; i < num_clusters; i++){
@@ -125,37 +104,6 @@ int main(int argc, char** argv){
     MPI_Barrier(MPI_COMM_WORLD);
     #endif
 
-    /*// send data points
-    int num_data_points_per_worker = num_data_points / (communicator_size);
-    int num_data_points_extra_per_master = num_data_points % (communicator_size);
-
-    num_my_data_points = num_data_points_per_worker;
-    if (my_rank == 0)
-        num_my_data_points += num_data_points_extra_per_master;
-
-    float** data_points_send_buffer = NULL;
-    if (my_rank == 0){
-        int send_buffer_length = num_data_points_per_worker * communicator_size;
-        data_points_send_buffer = (float**) malloc(sizeof(float*) * send_buffer_length);
-        for (int i = 0; i < send_buffer_length; i++)
-            data_points_send_buffer[i] = raw_data_points[i].attributes;
-    }
-
-    my_raw_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * num_my_data_points);
-    float** data_points_receive_buffer = (float**) malloc(sizeof(float*) * num_my_data_points);
-    for (int i = 0; i < num_my_data_points; i++){
-        my_raw_data_points[i].attributes = (float*) malloc(sizeof(float) * num_attributes);
-        data_points_receive_buffer[i] = my_raw_data_points[i].attributes;
-    }
-
-    MPI_Datatype mpi_point_buffer_type;
-    buildMPIPointBufferType(&mpi_point_buffer_type, num_attributes, data_points_receive_buffer[1] - data_points_receive_buffer[0], num_poin);
-    MPI_Type_commit(&mpi_point_buffer_type);
-
-    printf("Yes i got here %d\n", my_rank);
-
-    MPI_Scatter(*data_points_send_buffer, 1, mpi_point_buffer_type,
-                *data_points_receive_buffer, 1, mpi_point_buffer_type, 0, MPI_COMM_WORLD);*/
 
     // how many raw data points should each process receive
     int num_data_points_per_worker = num_data_points / (communicator_size);
@@ -182,17 +130,14 @@ int main(int argc, char** argv){
     float* data_points_send_buffer = NULL;
     if (my_rank == 0){
         data_points_send_buffer = (float*) malloc(sizeof(float) * num_data_points * num_attributes);
-        printf("\n\nSend buffer: %p\n\n", data_points_send_buffer);
         for (int i = 0; i < num_data_points; i++){
-            printf("\ndata point %d\n\t", i);
             for (int j = 0; j < num_attributes; j++){
-                printf("%f ", raw_data_points[i].attributes[j]);
                 data_points_send_buffer[i*num_attributes + j] = raw_data_points[i].attributes[j];
             }
         }
-        printf("\n\nSend buffer: %p\n\n", data_points_send_buffer);
-
     }
+
+    num_my_data_points = send_receive_count_buffer[my_rank] / num_attributes;
 
     // data points receive buffer
     float* data_points_receive_buffer = (float*) malloc(sizeof(float) * num_attributes * send_receive_count_buffer[my_rank]);
@@ -209,18 +154,39 @@ int main(int argc, char** argv){
     MPI_Scatterv(data_points_send_buffer, send_receive_count_buffer, displacements_buffer, MPI_FLOAT,
                  data_points_receive_buffer, send_receive_count_buffer[my_rank], MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-    #if DEBUG
-    MPI_Barrier(MPI_COMM_WORLD);
+     #if DEBUG
+     MPI_Barrier(MPI_COMM_WORLD);
 
-    printf("Rank: %d, Received: %d Points", my_rank, num_my_data_points);
+     printf("Rank: %d, Received: %d attributes\n", my_rank, num_my_data_points);
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    #endif
+     MPI_Barrier(MPI_COMM_WORLD);
+     #endif
+
+    // assign data points
+    my_raw_data_points = (RawDataPoint*) malloc(sizeof(RawDataPoint) * num_my_data_points);
+    my_data_points = (ClusterDataPoint*) malloc(sizeof(ClusterDataPoint) * num_my_data_points);
+    int offset = 0;
+    for (int i = 0; i < num_my_data_points; i++){
+        my_raw_data_points[i].attributes = (float*) malloc(sizeof(float) * num_attributes);
+        memcpy(my_raw_data_points[i].attributes, &data_points_receive_buffer[offset], num_attributes * sizeof(float));
+        offset += num_attributes;
+
+        my_data_points[i].data_point = my_raw_data_points[i];
+    }
 
     free(data_points_receive_buffer);
     free(data_points_send_buffer);
-    //free(send_receive_count_buffer);
-    //free(displacements_buffer);
+    free(send_receive_count_buffer);
+    free(displacements_buffer);
+
+    #if DEBUG
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    printf("Rank: %d, Received: %d attributes\n\t", my_rank, num_my_data_points);
+    printPoints(my_raw_data_points, num_my_data_points, num_attributes);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    #endif
 
     // do work
 
@@ -232,6 +198,11 @@ int main(int argc, char** argv){
     free(clusters);
 
     // free data points.
+    for (int i = 0; i < num_my_data_points; i++){
+        free(my_raw_data_points[i].attributes);
+    }
+    free(my_data_points);
+    free(my_raw_data_points);
 
 
     MPI_Finalize();
