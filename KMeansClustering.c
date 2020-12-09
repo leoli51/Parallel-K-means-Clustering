@@ -39,9 +39,11 @@ int main(int argc, char** argv){
     if (my_rank == 0){
         // parse file
         char* filename;
-
-        parseArgs(argc, argv, &filename, &num_clusters, &max_iterations);
-        parseFile(filename, &num_data_points, &num_attributes, &raw_data_points);
+        if(parseArgs(argc, argv, &filename, &num_clusters, &max_iterations) == -1) return -1;
+        if(num_clusters <= 1) { printf("Too few clusters, you should use a minimum of 2 clusters\n"); return -1; }
+        if(parseFile(filename, &num_data_points, &num_attributes, &raw_data_points) == -1) return -1;
+        if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; } //TODO inserire il controllo in parseFile è meglio
+        if(num
 
     }
 
