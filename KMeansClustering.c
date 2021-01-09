@@ -74,10 +74,24 @@ int main(int argc, char** argv){
                raw_data_points, &my_raw_data_points, &my_data_points);
 
     // do work
-    //assignPointsToNearestCluster(...);
-    updateLocalClusters(my_rank, num_data_points, num_attributes, num_my_data_points, my_data_points, num_clusters, clusters);
+    _Bool hasChanged = 0;
+    int num_iterations = 0;
+    do 
+    {
+      hasChanged = 0;
+      num_iterations++;
+      
+      assignPointsToNearestCluster(my_data_points, clusters, num_attributes, num_my_data_points, num_clusters, &hasChanged);
+          
+      updateLocalClusters(my_rank, num_data_points, num_attributes, num_my_data_points, my_data_points, num_clusters, clusters);
 
-    synchronizeClusters(my_rank, num_clusters, num_attributes, clusters);
+      synchronizeClusters(my_rank, num_clusters, num_attributes, clusters);    
+      
+      MPI_Allreduce(&hasChanged, &hasChanged, 1, MPI_BYTE, MPI_BOR, MPI_COMM_WORLD); //TODO
+      
+    }while(hasChanged);
+    
+    printf("%d: ended with %d iterations\n",my_rank,num_iterations); //TODO togliere
 
     // free cluster memory
     for (int i = 0; i < num_clusters; i++){
@@ -251,13 +265,11 @@ int updateLocalClusters(int my_rank, int num_data_points, int num_attributes, in
         for (int j = 0; j < num_attributes; j++)
             clusters[i].centroid.attributes[j] = 0;
     }
-
     for (int i = 0; i < num_my_data_points; i++){
         for (int j = 0; j < num_attributes; j++){
             clusters[my_data_points[i].cluster_id].centroid.attributes[j] += my_data_points[i].data_point.attributes[j];
         }
     }
-
     for (int i = 0; i < num_clusters; i++){
         for (int j = 0; j < num_attributes; j++)
             clusters[i].centroid.attributes[j] /= num_data_points;
@@ -265,7 +277,7 @@ int updateLocalClusters(int my_rank, int num_data_points, int num_attributes, in
 
 }
 
-int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters)
+int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged)
 {
   int i,j,n_attr,cluster_index;
   float distance,min_distance,temp;
@@ -290,7 +302,11 @@ int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters
  	  cluster_index = j;
  	}
       }
-     point.cluster_id = cluster_index; //assign the nearest cluster to the point
+     if(my_raw_data[i].cluster_id != cluster_index)
+      {
+        my_raw_data[i].cluster_id = cluster_index; //assign the nearest cluster to the point TODO (my_raw_data[i] sostitiuibile da point?) -> probabilmente no
+        *hasChanged = 1;
+      }
    }
   return 0;
 }
