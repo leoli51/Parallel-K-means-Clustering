@@ -29,7 +29,7 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
 
 
 // k-means prototype
-int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged);
+int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged,int* num_points_per_cluster);
 //int updateClusters(...);
 
 

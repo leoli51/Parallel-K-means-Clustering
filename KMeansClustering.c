@@ -76,22 +76,26 @@ int main(int argc, char** argv){
     // do work
     _Bool hasChanged;
     int num_iterations = 0;
+    int *num_points_per_cluster = malloc(sizeof(int) * num_clusters);
     do 
     {
       hasChanged = 0;
       num_iterations++;
       
-      assignPointsToNearestCluster(my_data_points, clusters, num_attributes, num_my_data_points, num_clusters, &hasChanged);
-          
+      assignPointsToNearestCluster(my_data_points, clusters, num_attributes, num_my_data_points, num_clusters, &hasChanged,num_points_per_cluster);
+      MPI_Allreduce(&hasChanged, &hasChanged, 1, MPI_BYTE, MPI_BOR, MPI_COMM_WORLD); //TODO
+      if (!hasChanged) break;  
+      
       updateLocalClusters(my_rank, num_data_points, num_attributes, num_my_data_points, my_data_points, num_clusters, clusters);
 
       synchronizeClusters(my_rank, num_clusters, num_attributes, clusters);    
       
-      MPI_Allreduce(&hasChanged, &hasChanged, 1, MPI_BYTE, MPI_BOR, MPI_COMM_WORLD); //TODO
       
-    }while(hasChanged && (max_iterations <=0 || num_iterations < max_iterations) );
+    }while(max_iterations <=0 || num_iterations < max_iterations);
     
     printf("%d: ended with %d iterations\n",my_rank,num_iterations); //TODO togliere
+
+    free(num_points_per_cluster);
 
     // free cluster memory
     for (int i = 0; i < num_clusters; i++){
@@ -229,13 +233,14 @@ int sendPoints( int my_rank, int communicator_size, int num_data_points, int num
 }
 
 int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters){
+    /**
     #if DEBUG
     printf("Rank: %d old cluster 0:\n\t", my_rank);
     for (int i = 0 ; i < num_attributes; i++)
         printf("%f ", clusters[0].centroid.attributes[i]);
     printf("\n");
     #endif
-
+    **/
     float* clusters_send_buffer = (float*) malloc(sizeof(float) * num_clusters * num_attributes);
     for (int i = 0; i < num_clusters; i++){
         memcpy(&clusters_send_buffer[i * num_attributes], clusters[i].centroid.attributes, sizeof(float) * num_attributes);
@@ -250,10 +255,16 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
     }
 
     #if DEBUG
-    printf("Rank: %d new cluster 0:\n\t", my_rank);
-    for (int i = 0 ; i < num_attributes; i++)
-        printf("%f ", clusters[0].centroid.attributes[i]);
-    printf("\n");
+    if(my_rank == 0)
+    {
+     for(int c = 0; c < num_clusters; c++)
+      { 
+       printf("\nnew cluster %d:\n\t", c);
+       for (int i = 0 ; i < num_attributes; i++)
+        printf("%f ", clusters[c].centroid.attributes[i]);
+       printf("\n");
+      }
+    }
     #endif
 
     free(clusters_send_buffer);
@@ -277,13 +288,14 @@ int updateLocalClusters(int my_rank, int num_data_points, int num_attributes, in
 
 }
 
-int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged)
+int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged,int* num_points_per_cluster)
 {
   int i,j,n_attr,cluster_index;
   float distance,min_distance,temp;
   ClusterDataPoint point;
   Cluster cluster;
-  #pragma omp parallel for
+  for(i = 0; i < num_clusters ; i++) num_points_per_cluster[i] = 0;
+  //#pragma omp parallel for
   for(i = 0; i < my_raw_data_num; i++) //for every point to analyze
    {
      point = my_raw_data[i]; //take a point
@@ -307,6 +319,7 @@ int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters
         my_raw_data[i].cluster_id = cluster_index; //assign the nearest cluster to the point TODO (my_raw_data[i] sostitiuibile da point?) -> probabilmente no
         *hasChanged = 1;
       }
+     num_points_per_cluster[cluster_index] += 1;
    }
   return 0;
 }
