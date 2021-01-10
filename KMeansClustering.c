@@ -228,14 +228,8 @@ int sendPoints( int my_rank, int communicator_size, int num_data_points, int num
     free(displacements_buffer);
 }
 
-int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters){
-    #if DEBUG
-    printf("Rank: %d old cluster 0:\n\t", my_rank);
-    for (int i = 0 ; i < num_attributes; i++)
-        printf("%f ", clusters[0].centroid.attributes[i]);
-    printf("\n");
-    #endif
-
+int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters, int* points_per_cluster){
+    // Allreduce new cluster values
     float* clusters_send_buffer = (float*) malloc(sizeof(float) * num_clusters * num_attributes);
     for (int i = 0; i < num_clusters; i++){
         memcpy(&clusters_send_buffer[i * num_attributes], clusters[i].centroid.attributes, sizeof(float) * num_attributes);
@@ -245,19 +239,37 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
 
     MPI_Allreduce(clusters_send_buffer, clusters_receive_buffer, num_clusters * num_attributes, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
 
+    // Allreduce points per cluster
+    int* points_per_cluster_receive_buffer = (int*) malloc(sizeof(int) * num_clusters);
+    for (int i = 0; i < num_clusters; i++)
+        points_per_cluster_receive_buffer[i] = 0;
+    
+    MPI_Allreduce(points_per_cluster, points_per_cluster_receive_buffer, num_clusters, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+
+    // Correctly update all clusters
     for (int i = 0; i < num_clusters; i++){
         memcpy(clusters[i].centroid.attributes, &clusters_receive_buffer[i*num_attributes], sizeof(float) * num_attributes);
+        for (int j = 0; j < num_attributes; j++)
+            clusters[i].centroid.attributes[j] /= points_per_cluster_receive_buffer[i];
     }
 
+
     #if DEBUG
-    printf("Rank: %d new cluster 0:\n\t", my_rank);
-    for (int i = 0 ; i < num_attributes; i++)
-        printf("%f ", clusters[0].centroid.attributes[i]);
-    printf("\n");
+    if (my_rank == 0){
+        printf("Rank: %d\n", my_rank);
+        for (int c = 0; c < num_clusters; c++){
+        printf("new cluster %d:\n\t", c);
+        for (int i = 0 ; i < num_attributes; i++)
+            printf("%f ", clusters[c].centroid.attributes[i]);
+        printf("\n");
+        }
+    }
     #endif
 
     free(clusters_send_buffer);
     free(clusters_receive_buffer);
+    free(points_per_cluster_receive_buffer);
 }
 
 int updateLocalClusters(int my_rank, int num_data_points, int num_attributes, int num_my_data_points, ClusterDataPoint* my_data_points, int num_clusters, Cluster* clusters){
@@ -270,11 +282,6 @@ int updateLocalClusters(int my_rank, int num_data_points, int num_attributes, in
             clusters[my_data_points[i].cluster_id].centroid.attributes[j] += my_data_points[i].data_point.attributes[j];
         }
     }
-    for (int i = 0; i < num_clusters; i++){
-        for (int j = 0; j < num_attributes; j++)
-            clusters[i].centroid.attributes[j] /= num_data_points;
-    }
-
 }
 
 int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged)
