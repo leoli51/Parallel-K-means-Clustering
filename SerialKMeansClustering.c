@@ -9,6 +9,7 @@ Serial K-Means Clustering
 #include <unistd.h>
 
 void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_attributes, int num_data_points, int num_clusters);
+int assignPointsToNearestClusterSerial(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged);
 
 int main(int argc, char** argv)
 {
@@ -48,7 +49,7 @@ int main(int argc, char** argv)
     hasChanged = 0;
     num_iterations++;
     printf("Assignment %d:\n",num_iterations);
-    assignPointsToNearestCluster(my_data_points, clusters, num_attributes, num_data_points, num_clusters, &hasChanged);
+    assignPointsToNearestClusterSerial(my_data_points, clusters, num_attributes, num_data_points, num_clusters, &hasChanged);
     updateClusters(my_data_points, clusters, num_attributes, num_data_points, num_clusters);
     
   }while(hasChanged && (max_iterations <= 0 || num_iterations < max_iterations));
@@ -71,7 +72,7 @@ int main(int argc, char** argv)
  return 0;
 }
 
-int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged)
+int assignPointsToNearestClusterSerial(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged)
 {
   int i,j,n_attr,cluster_index;
   float distance,min_distance,temp;
