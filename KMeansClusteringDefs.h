@@ -25,11 +25,11 @@ int sendPoints( int my_rank, int communicator_size, int num_data_points, int num
                 RawDataPoint* raw_data_points, RawDataPoint** my_raw_data_points, ClusterDataPoint** my_data_points);
 
 int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters, RawDataPoint* raw_data_points);
-int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters);
+int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters, int* points_per_cluster);
 
 
 // k-means prototype
-int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged);
+int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged,int* num_points_per_cluster);
 //int updateClusters(...);
 
 
