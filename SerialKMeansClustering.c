@@ -111,6 +111,12 @@ void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_at
 {
   float sums[num_clusters][num_attributes];
   int nums[num_clusters];
+  for(int i = 0; i < num_clusters; i++)
+   {
+     nums[i] = 0;
+     for(int j = 0; j < num_attributes; j++)
+       sums[i][j] = 0;
+   }
   ClusterDataPoint point;
   for(int dp = 0; dp < num_data_points; dp++)
     {
