@@ -19,5 +19,11 @@ run_local : $(target)
 run_distributed : $(target)
 	$(run) -np $(processes) --oversubscribe --host node1,node2,node3 --mca btl_base_warn_component_unused 0 ./$(target) $(filename) $(num_clusters)
 
+serial.o : SerialKMeansClustering.c
+	   gcc -Wall SerialKMeansClustering.c -o serial.o
+
+run_serial : serial.o
+	     ./serial.o $(filename) $(num_clusters)
+
 clean :
 	rm $(target)

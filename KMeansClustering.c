@@ -27,7 +27,7 @@ int main(int argc, char** argv){
     int num_data_points;
     int num_attributes;
     int num_clusters;
-    int max_iterations;
+    int max_iterations = -1;
 
 
     Cluster* clusters;
@@ -74,7 +74,7 @@ int main(int argc, char** argv){
                raw_data_points, &my_raw_data_points, &my_data_points);
 
     // do work
-    _Bool hasChanged = 0;
+    _Bool hasChanged;
     int num_iterations = 0;
     do 
     {
@@ -89,7 +89,7 @@ int main(int argc, char** argv){
       
       MPI_Allreduce(&hasChanged, &hasChanged, 1, MPI_BYTE, MPI_BOR, MPI_COMM_WORLD); //TODO
       
-    }while(hasChanged);
+    }while(hasChanged && (max_iterations <=0 || num_iterations < max_iterations) );
     
     printf("%d: ended with %d iterations\n",my_rank,num_iterations); //TODO togliere
 
