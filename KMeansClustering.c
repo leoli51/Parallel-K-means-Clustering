@@ -83,13 +83,12 @@ int main(int argc, char** argv){
       num_iterations++;
       
       assignPointsToNearestCluster(my_data_points, clusters, num_attributes, num_my_data_points, num_clusters, &hasChanged,num_points_per_cluster);
-      MPI_Allreduce(&hasChanged, &hasChanged, 1, MPI_BYTE, MPI_BOR, MPI_COMM_WORLD); //TODO
-      if (!hasChanged) break;  
+      MPI_Allreduce(&hasChanged, &hasChanged, 1, MPI_BYTE, MPI_BOR, MPI_COMM_WORLD); //if someone has changed at least a datapoint to another cluster, hasChanged is 1, otherwise it's 0
+      if (!hasChanged) break; //if we haven't moved any datapoint, then we have finished assigning it 
       
-      updateLocalClusters(my_rank, num_attributes, num_my_data_points, my_data_points, num_clusters, clusters);
+      updateLocalClusters(my_rank, num_attributes, num_my_data_points, my_data_points, num_clusters, clusters); //we calculate our local average for new clusters
 
-      synchronizeClusters(my_rank, num_clusters, num_attributes, clusters, num_points_per_cluster);    
-      
+      synchronizeClusters(my_rank, num_clusters, num_attributes, clusters, num_points_per_cluster); //we reduce the average to get new centroids for the clusters
       
     }while(max_iterations <=0 || num_iterations < max_iterations);
    
@@ -147,6 +146,7 @@ int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clu
     free(cluster_buffer);
     MPI_Type_free(&mpi_cluster_buffer_type);
 
+    /**
     #if DEBUG
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -158,6 +158,7 @@ int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clu
     }
 
     #endif
+    **/
 }
 
 int sendPoints( int my_rank, int communicator_size, int num_data_points, int num_attributes,
@@ -204,21 +205,21 @@ int sendPoints( int my_rank, int communicator_size, int num_data_points, int num
             displacements_buffer[i] = displacements_buffer[i-1] + send_receive_count_buffer[i-1];
     }
 
-
+    /**
     #if DEBUG
     printf("R: %d, Should Receive: %d attributes\n", my_rank, send_receive_count_buffer[my_rank]);
     if (my_rank == 0)
         printf("Total attributes: %d\n", num_data_points * num_attributes);
     #endif
-
+    **/
     MPI_Scatterv(data_points_send_buffer, send_receive_count_buffer, displacements_buffer, MPI_FLOAT,
                  data_points_receive_buffer, send_receive_count_buffer[my_rank], MPI_FLOAT, 0, MPI_COMM_WORLD);
-
+    /**
      #if DEBUG
      MPI_Barrier(MPI_COMM_WORLD);
      printf("Rank: %d, Received: %d attributes\n", my_rank, *num_my_data_points * num_attributes);
      #endif
-
+    **/
     // assign data points
     (*my_raw_data_points) = (RawDataPoint*) malloc(sizeof(RawDataPoint) * (*num_my_data_points));
     (*my_data_points) = (ClusterDataPoint*) malloc(sizeof(ClusterDataPoint) * (*num_my_data_points));
@@ -263,7 +264,7 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
             clusters[i].centroid.attributes[j] /= points_per_cluster_receive_buffer[i];
     }
 
-
+    /**
     #if DEBUG
     if (my_rank == 0){
         printf("Rank: %d\n", my_rank);
@@ -275,7 +276,7 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
         }
     }
     #endif
-
+    **/
     free(clusters_send_buffer);
     free(clusters_receive_buffer);
     free(points_per_cluster_receive_buffer);

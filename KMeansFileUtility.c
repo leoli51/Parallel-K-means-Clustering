@@ -121,7 +121,6 @@ int printResult(char *filename,Cluster* clusters, int num_clusters, int num_attr
      printf("There was an error in trying to open the file\n");
      return -1;
    }
-  
   char *buffer = malloc(MAX_FLOAT_LENGTH+1);
   for(int c = 0; c < num_clusters; c++)
    {
@@ -133,14 +132,10 @@ int printResult(char *filename,Cluster* clusters, int num_clusters, int num_attr
             printf("snprintf failure in printResult()\n");
             return -1;
           }
-        printf("%s\n",buffer);
-        //strcat(buffer," ");
         write(fd,buffer,strlen(buffer));
       }
      write(fd,"\n",strlen("\n"));
    }
-   //**/
-  //write(fd,filename,strlen(filename));
   if(close(fd) == -1) { printf("Error in closing the file in printResult()\n"); return -1; }
   return 0;
 }
