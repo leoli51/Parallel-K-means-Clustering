@@ -9,6 +9,7 @@
 // parsing prototypes
 int parseArgs(int argc, char** argv, char** filename, int* clusters_size, int* max_iterations);
 int parseFile(const char* filename,int* data_points_size, int* attributes_size, RawDataPoint** array_of_datapoints);
+int printResult(char *filename,Cluster* clusters, int num_clusters, int num_attributes);
 int readLine(FILE* file,char* line);
 
 #endif

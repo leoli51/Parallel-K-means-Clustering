@@ -48,15 +48,17 @@ int main(int argc, char** argv)
   {
     hasChanged = 0;
     num_iterations++;
-    printf("Assignment %d:\n",num_iterations);
+    //printf("Assignment %d:\n",num_iterations);
     assignPointsToNearestClusterSerial(my_data_points, clusters, num_attributes, num_data_points, num_clusters, &hasChanged);
     updateClusters(my_data_points, clusters, num_attributes, num_data_points, num_clusters);
     
   }while(hasChanged && (max_iterations <= 0 || num_iterations < max_iterations));
   
- printf("Result obtained with %d iterations:\n",num_iterations);
- for(int dp = 0; dp < num_data_points; dp++)
-    printf("DataPoint %d belongs to cluster %d\n",dp,my_data_points[dp].cluster_id);
+ char *result = "serialResult.txt";
+ printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
+ printResult(result,clusters,num_clusters,num_attributes);
+ //for(int dp = 0; dp < num_data_points; dp++)
+   // printf("DataPoint %d belongs to cluster %d\n",dp,my_data_points[dp].cluster_id);
     
  // free cluster memory
  for (int i = 0; i < num_clusters; i++)
@@ -93,8 +95,8 @@ int assignPointsToNearestClusterSerial(ClusterDataPoint* my_raw_data,Cluster* cl
  	 }
  	if(j == 0 || distance < min_distance) //if it is the first cluster or it is the nearest up to now
  	{
- 	  if (j == 0) printf("Point %d is changing cluster from %d to %d bc it is the first cluster, new min_distance is %f\n",i,cluster_index,j,distance);
- 	  else printf("Point %d is changing from cluster %d to %d because %f < %f\n",i,cluster_index,j,distance,min_distance);
+ 	  //if (j == 0) printf("Point %d is changing cluster from %d to %d bc it is the first cluster, new min_distance is %f\n",i,cluster_index,j,distance);
+ 	  //else printf("Point %d is changing from cluster %d to %d because %f < %f\n",i,cluster_index,j,distance,min_distance);
  	  min_distance = distance; //consider it as the nearest
  	  cluster_index = j;
  	}
@@ -130,7 +132,8 @@ void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_at
      for(int i = 0; i < num_attributes; i++)
        if(nums[c] != 0) clusters[c].centroid.attributes[i] = sums[c][i] / nums[c];
        else clusters[c].centroid.attributes[i] = 0;
-    
+  
+  /**
   printf("\n\nnew centroids:\n");   
   for(int c = 0; c < num_clusters; c++)
     {
@@ -139,5 +142,6 @@ void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_at
        printf("%f ",clusters[c].centroid.attributes[i]);
       printf("\n");
     }
-  printf("\n\n");
+  **/
+  //printf("\n\n");
 }

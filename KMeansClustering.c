@@ -92,8 +92,13 @@ int main(int argc, char** argv){
       
       
     }while(max_iterations <=0 || num_iterations < max_iterations);
-    
-    printf("%d: ended with %d iterations\n",my_rank,num_iterations); //TODO togliere
+   
+    if(my_rank == 0)
+     {
+      char *result = "result.txt";
+      printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
+      printResult(result,clusters,num_clusters,num_attributes);
+     }
 
     free(num_points_per_cluster);
 

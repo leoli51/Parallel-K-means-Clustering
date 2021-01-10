@@ -1,5 +1,7 @@
 
 #include "KMeansFileUtility.h"
+#include <unistd.h>
+#include <fcntl.h>
 
 /**
 function that parses the input arguments in:
@@ -61,7 +63,6 @@ The function returns:
 int parseFile(const char* filename,int* data_points_size, int* attributes_size, RawDataPoint** array_of_datapoints)
 {
   FILE *file = fopen(filename,"r");
-  char read_char;
   if(file == NULL)
    {
      printf("There was an error in trying to open the file\n");
@@ -75,7 +76,7 @@ int parseFile(const char* filename,int* data_points_size, int* attributes_size, 
   *data_points_size = atoi(strtok(firstRowBuffer," "));
   *attributes_size = atoi(strtok(NULL," "));
   free(firstRowBuffer);
-  int max_line_len = sizeof(char) * ((MAX_INTEGER_LENGTH*(*attributes_size))+(*attributes_size));
+  int max_line_len = sizeof(char) * ((MAX_FLOAT_LENGTH*(*attributes_size))+(*attributes_size));
   char* line = malloc(max_line_len),*token;
   RawDataPoint *data_points = malloc(sizeof(RawDataPoint)*(*data_points_size));
   for(int i = 0; i < (*data_points_size); i++)
@@ -107,4 +108,39 @@ int parseFile(const char* filename,int* data_points_size, int* attributes_size, 
      return -1;
    }
  return 0;
+}
+
+/**
+Funzione che scrive i centroidi finali dei cluster nel file filename
+**/
+int printResult(char *filename,Cluster* clusters, int num_clusters, int num_attributes)
+{
+  int fd = open(filename,O_WRONLY | O_CREAT| O_TRUNC,0666);
+  if(fd == -1)
+   {
+     printf("There was an error in trying to open the file\n");
+     return -1;
+   }
+  
+  char *buffer = malloc(MAX_FLOAT_LENGTH+1);
+  for(int c = 0; c < num_clusters; c++)
+   {
+     for(int attr = 0; attr < num_attributes; attr++)
+      {
+        memset(buffer,0,MAX_FLOAT_LENGTH+1);
+        if(snprintf(buffer,MAX_FLOAT_LENGTH+1,"%f ",clusters[c].centroid.attributes[attr]) == -1)
+          {
+            printf("snprintf failure in printResult()\n");
+            return -1;
+          }
+        printf("%s\n",buffer);
+        //strcat(buffer," ");
+        write(fd,buffer,strlen(buffer));
+      }
+     write(fd,"\n",strlen("\n"));
+   }
+   //**/
+  //write(fd,filename,strlen(filename));
+  if(close(fd) == -1) { printf("Error in closing the file in printResult()\n"); return -1; }
+  return 0;
 }
