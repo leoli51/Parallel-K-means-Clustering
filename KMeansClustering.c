@@ -23,6 +23,9 @@ int main(int argc, char** argv){
     MPI_Comm_size(MPI_COMM_WORLD, &communicator_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
+    //timing values
+    double local_start,local_finish,local_elapsed,elapsed;
+
     // K-means
     int num_data_points;
     int num_attributes;
@@ -46,7 +49,9 @@ int main(int argc, char** argv){
 
     }
 
-
+    MPI_Barrier(MPI_COMM_WORLD);
+    local_start = MPI_Wtime();
+    
     // send/receive information to create datatypes
     int information_buffer[4] = {num_data_points, num_attributes, num_clusters, max_iterations};
     MPI_Bcast(information_buffer, 4, MPI_INT, 0, MPI_COMM_WORLD);
@@ -82,8 +87,8 @@ int main(int argc, char** argv){
       hasChanged = 0;
       num_iterations++;
       
-      assignPointsToNearestCluster(my_data_points, clusters, num_attributes, num_my_data_points, num_clusters, &hasChanged,num_points_per_cluster);
-      MPI_Allreduce(&hasChanged, &hasChanged, 1, MPI_BYTE, MPI_BOR, MPI_COMM_WORLD); //if someone has changed at least a datapoint to another cluster, hasChanged is 1, otherwise it's 0
+      assignPointsToNearestCluster(my_data_points, clusters, num_attributes, num_my_data_points, num_clusters, &hasChanged,num_points_per_cluster); //we give every point the id of the nearest cluster
+      MPI_Allreduce(&hasChanged, &hasChanged, 1, MPI_BYTE, MPI_BOR, MPI_COMM_WORLD); //if someone has changed at least a datapoint cluster_id, hasChanged is 1, otherwise it's 0
       if (!hasChanged) break; //if we haven't moved any datapoint, then we have finished assigning it 
       
       updateLocalClusters(my_rank, num_attributes, num_my_data_points, my_data_points, num_clusters, clusters); //we calculate our local average for new clusters
@@ -92,13 +97,20 @@ int main(int argc, char** argv){
       
     }while(max_iterations <=0 || num_iterations < max_iterations);
    
-    if(my_rank == 0)
+    local_finish = MPI_Wtime();
+    local_elapsed = local_finish - local_start;
+    MPI_Reduce(&local_elapsed,&elapsed,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
+   
+    if(my_rank == 0) //put the result in a file
      {
       char *result = "result.txt";
       printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
+      printf("Elapsed time: %e seconds\n",elapsed);
       printResult(result,clusters,num_clusters,num_attributes);
      }
 
+
+    //free memory
     free(num_points_per_cluster);
 
     // free cluster memory
@@ -119,6 +131,13 @@ int main(int argc, char** argv){
     return 0; // Return correct status
 }
 
+
+
+
+
+/**
+SendClusters send to all the nodes in MPI the clusters and initialize the first i cluster's centroid to the first i datapoints
+**/
 int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters, RawDataPoint* raw_data_points){
     // initialize cluster buffer
     float** cluster_buffer = (float**) malloc(num_clusters*sizeof(float*));
@@ -161,6 +180,14 @@ int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clu
     **/
 }
 
+
+
+
+
+
+/**
+sendPoints divide the datapoints among the MPI nodes
+**/
 int sendPoints( int my_rank, int communicator_size, int num_data_points, int num_attributes,
                 int* num_my_data_points,
                 RawDataPoint* raw_data_points, RawDataPoint** my_raw_data_points, ClusterDataPoint** my_data_points){
@@ -238,6 +265,13 @@ int sendPoints( int my_rank, int communicator_size, int num_data_points, int num
     free(displacements_buffer);
 }
 
+
+
+
+
+/**
+synchronizeClusters calculates the new centroids for the clusters by reducing the part of the average each MPI node calculated
+**/
 int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters, int* points_per_cluster){
     // Allreduce new cluster values
     float* clusters_send_buffer = (float*) malloc(sizeof(float) * num_clusters * num_attributes);
@@ -282,6 +316,13 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
     free(points_per_cluster_receive_buffer);
 }
 
+
+
+
+
+/**
+updateLocalClusters calculate for each cluster the part of the average of the node
+**/
 int updateLocalClusters(int my_rank, int num_attributes, int num_my_data_points, ClusterDataPoint* my_data_points, int num_clusters, Cluster* clusters){
     for (int i = 0; i < num_clusters; i++){
         for (int j = 0; j < num_attributes; j++)
@@ -294,6 +335,13 @@ int updateLocalClusters(int my_rank, int num_attributes, int num_my_data_points,
     }
 }
 
+
+
+
+
+/**
+assignPointsToNearestCluster gives each datapoint a cluster_id, in particular, the cluster_id of the nearest cluster of the point
+**/
 int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged,int* num_points_per_cluster)
 {
   int i,j,n_attr,cluster_index;
@@ -301,7 +349,7 @@ int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters
   ClusterDataPoint point;
   Cluster cluster;
   for(i = 0; i < num_clusters ; i++) num_points_per_cluster[i] = 0;
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for(i = 0; i < my_raw_data_num; i++) //for every point to analyze
    {
      point = my_raw_data[i]; //take a point

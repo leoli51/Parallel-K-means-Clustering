@@ -12,7 +12,7 @@ typedef struct {
 
 typedef struct {
     int cluster_id;
-    RawDataPoint data_point; // TODO: should it be a pointer or the actual struct object?
+    RawDataPoint data_point;
 } ClusterDataPoint;
 
 typedef struct {
