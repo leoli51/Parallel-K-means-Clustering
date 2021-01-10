@@ -7,6 +7,7 @@ Serial K-Means Clustering
 #include "KMeansClusteringDefs.h"
 #include "KMeansFileUtility.c"
 #include <unistd.h>
+#include <time.h>
 
 void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_attributes, int num_data_points, int num_clusters);
 int assignPointsToNearestClusterSerial(ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int my_raw_data_num,int num_clusters,_Bool* hasChanged);
@@ -19,6 +20,9 @@ int main(int argc, char** argv)
   int num_clusters;
   int max_iterations = -1;
   
+  //timing
+  clock_t start,finish;
+  
   // parse file
   char* filename;
   RawDataPoint* raw_data_points;
@@ -26,6 +30,8 @@ int main(int argc, char** argv)
   if(num_clusters <= 1) { printf("Too few clusters, you should use a minimum of 2 clusters\n"); return -1; }
   if(parseFile(filename, &num_data_points, &num_attributes, &raw_data_points) == -1) return -1;
   if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; } //TODO inserire il controllo in parseFile è meglio
+  
+  start = clock();
   
   // initialize clusters as empty
   Cluster* clusters = (Cluster*) malloc(sizeof(Cluster) * num_clusters);
@@ -48,17 +54,17 @@ int main(int argc, char** argv)
   {
     hasChanged = 0;
     num_iterations++;
-    //printf("Assignment %d:\n",num_iterations);
     assignPointsToNearestClusterSerial(my_data_points, clusters, num_attributes, num_data_points, num_clusters, &hasChanged);
     updateClusters(my_data_points, clusters, num_attributes, num_data_points, num_clusters);
     
   }while(hasChanged && (max_iterations <= 0 || num_iterations < max_iterations));
   
+ finish = clock(); 
+ double elapsed = (double)(finish - start)/CLOCKS_PER_SEC;
  char *result = "serialResult.txt";
  printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
+ printf("Elapsed time: %e seconds\n",elapsed);
  printResult(result,clusters,num_clusters,num_attributes);
- //for(int dp = 0; dp < num_data_points; dp++)
-   // printf("DataPoint %d belongs to cluster %d\n",dp,my_data_points[dp].cluster_id);
     
  // free cluster memory
  for (int i = 0; i < num_clusters; i++)
@@ -80,7 +86,6 @@ int assignPointsToNearestClusterSerial(ClusterDataPoint* my_raw_data,Cluster* cl
   float distance,min_distance,temp;
   ClusterDataPoint point;
   Cluster cluster;
-  //#pragma omp parallel for
   for(i = 0; i < my_raw_data_num; i++) //for every point to analyze
    {
      point = my_raw_data[i]; //take a point
@@ -95,8 +100,6 @@ int assignPointsToNearestClusterSerial(ClusterDataPoint* my_raw_data,Cluster* cl
  	 }
  	if(j == 0 || distance < min_distance) //if it is the first cluster or it is the nearest up to now
  	{
- 	  //if (j == 0) printf("Point %d is changing cluster from %d to %d bc it is the first cluster, new min_distance is %f\n",i,cluster_index,j,distance);
- 	  //else printf("Point %d is changing from cluster %d to %d because %f < %f\n",i,cluster_index,j,distance,min_distance);
  	  min_distance = distance; //consider it as the nearest
  	  cluster_index = j;
  	}
@@ -132,16 +135,4 @@ void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_at
      for(int i = 0; i < num_attributes; i++)
        if(nums[c] != 0) clusters[c].centroid.attributes[i] = sums[c][i] / nums[c];
        else clusters[c].centroid.attributes[i] = 0;
-  
-  /**
-  printf("\n\nnew centroids:\n");   
-  for(int c = 0; c < num_clusters; c++)
-    {
-      printf("Cluster %d: ",c);
-      for(int i = 0 ; i< num_attributes; i++)
-       printf("%f ",clusters[c].centroid.attributes[i]);
-      printf("\n");
-    }
-  **/
-  //printf("\n\n");
 }
