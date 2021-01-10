@@ -49,7 +49,6 @@ int main(int argc, char** argv)
     num_iterations++;
     printf("Assignment %d:\n",num_iterations);
     assignPointsToNearestCluster(my_data_points, clusters, num_attributes, num_data_points, num_clusters, &hasChanged);
-    
     updateClusters(my_data_points, clusters, num_attributes, num_data_points, num_clusters);
     
   }while(hasChanged && (max_iterations <= 0 || num_iterations < max_iterations));
@@ -93,7 +92,8 @@ int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters
  	 }
  	if(j == 0 || distance < min_distance) //if it is the first cluster or it is the nearest up to now
  	{
- 	  printf("Point %d is changing cluster from %d to %d because %f < %f\n",i,cluster_index,j,distance,min_distance);
+ 	  if (j == 0) printf("Point %d is changing cluster from %d to %d bc it is the first cluster, new min_distance is %f\n",i,cluster_index,j,distance);
+ 	  else printf("Point %d is changing from cluster %d to %d because %f < %f\n",i,cluster_index,j,distance,min_distance);
  	  min_distance = distance; //consider it as the nearest
  	  cluster_index = j;
  	}
@@ -121,5 +121,16 @@ void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_at
     }
   for(int c = 0; c < num_clusters; c++) 
      for(int i = 0; i < num_attributes; i++)
-       clusters[c].centroid.attributes[i] = sums[c][i] / nums[c];
+       if(nums[c] != 0) clusters[c].centroid.attributes[i] = sums[c][i] / nums[c];
+       else clusters[c].centroid.attributes[i] = 0;
+    
+  printf("\n\nnew centroids:\n");   
+  for(int c = 0; c < num_clusters; c++)
+    {
+      printf("Cluster %d: ",c);
+      for(int i = 0 ; i< num_attributes; i++)
+       printf("%f ",clusters[c].centroid.attributes[i]);
+      printf("\n");
+    }
+  printf("\n\n");
 }
