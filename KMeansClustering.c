@@ -13,7 +13,6 @@
 
 #include <unistd.h>
 
-int gatherDataPoint(int my_rank, ClusterDataPoint* my_points, int num_my_points, int comm_size, int num_data_points);
 
 int main(int argc, char** argv){
     // Standard MPI code
@@ -102,20 +101,25 @@ int main(int argc, char** argv){
     local_elapsed = local_finish - local_start;
     MPI_Reduce(&local_elapsed,&elapsed,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
     
-       
-    gatherDataPoint(my_rank, my_data_points, num_my_data_points, communicator_size, num_data_points);
+    int* clustered_points = NULL;
+    if (my_rank == 0)
+        clustered_points = (int*) malloc(sizeof(int) * num_data_points);
+
+    gatherDataPoint(my_rank, my_data_points, num_my_data_points, communicator_size, num_data_points, clustered_points);
    
     if(my_rank == 0) //put the result in a file
      {
-      char *result = "result.txt";
-      printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
-      printf("Elapsed time: %e seconds\n",elapsed);
-      printResult(result,clusters,num_clusters,num_attributes);
+        char *result = "result.txt";
+        printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
+        printf("Elapsed time: %e seconds\n",elapsed);
+        printResult(result,clusters,num_clusters,num_attributes);
+        printMyData("clusters.txt", clustered_points, num_data_points);
      }
 
 
     //free memory
     free(num_points_per_cluster);
+    free(clustered_points);
 
     // free cluster memory
     for (int i = 0; i < num_clusters; i++){
@@ -136,27 +140,37 @@ int main(int argc, char** argv){
 }
 
 
-int gatherDataPoint(int my_rank, ClusterDataPoint* my_points, int num_my_points, int comm_size, int num_data_points)
+int gatherDataPoint(int my_rank, ClusterDataPoint* my_points, int num_my_points, int comm_size, int num_data_points, int* clustered_points)
 {
-  int *clusters_id = (int*) malloc(sizeof(int)*num_my_points);
-  char *filename = "clusterization.txt";
-  for(int i = 0 ; i < num_my_points; i++) clusters_id[i] = my_points[i].cluster_id;
-  int *rcv_clusters_id = NULL, *recv = NULL;
-  if (my_rank == 0) 
-   {
-     rcv_clusters_id = (int*) malloc(sizeof(int)*num_data_points);
-     recv = (int*) malloc(sizeof(int)*comm_size);
-     recv[0] = num_my_points;
-     int remaining = num_data_points % comm_size;
-     for(int i = 1 ; i < comm_size; i++)
-       if (remaining-- > 0) displacement[i] = num_my_points + 1;
-   }
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Gatherv(clusters_id, num_my_points, MPI_INT, rcv_clusters_id, recv, MPI_INT, 0, MPI_COMM_WORLD);
-  
-  if(my_rank == 0) { printMyData(filename, rcv_clusters_id, num_data_points); free(rcv_clusters_id); }
-  free(displacement);
-  free(clusters_id);
+    // Get number of datapoints that each worker has
+    int* num_data_points_per_worker = NULL;
+    if (my_rank == 0)
+        num_data_points_per_worker = (int*) malloc(sizeof(int) * comm_size);
+    
+    MPI_Gather(&num_my_points, 1, MPI_INT, num_data_points_per_worker, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // create clustered point send buffer 
+    int* my_clustered_points_buffer = (int*) malloc(sizeof(int) * num_my_points);
+    for(int i = 0 ; i < num_my_points; i++) 
+        my_clustered_points_buffer[i] = my_points[i].cluster_id;
+
+    // create displacements array
+    int* displacements = NULL;
+    if (my_rank == 0) {
+        displacements = (int*) malloc(sizeof(int) * comm_size);
+        int displacement = 0;
+        for (int i = 0; i < comm_size; i++){
+            displacements[i] = displacement;
+            displacement += num_data_points_per_worker[i];
+        }
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Gatherv(my_clustered_points_buffer, num_my_points, MPI_INT, clustered_points, num_data_points_per_worker, displacements, MPI_INT, 0, MPI_COMM_WORLD);
+    
+    free(displacements);
+    free(num_data_points_per_worker);
+    free(my_clustered_points_buffer);
 }
 
 
@@ -189,20 +203,6 @@ int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clu
 
     free(cluster_buffer);
     MPI_Type_free(&mpi_cluster_buffer_type);
-
-    /**
-    #if DEBUG
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    for (int i = 0; i < num_clusters; i++){
-      printf("Rank: %d\tCluster %d: ", my_rank, clusters[i].cluster_id);
-      for (int j = 0; j < num_attributes; j++)
-        printf(" %f", clusters[i].centroid.attributes[j]);
-      printf("\n");
-    }
-
-    #endif
-    **/
 }
 
 
@@ -257,21 +257,9 @@ int sendPoints( int my_rank, int communicator_size, int num_data_points, int num
             displacements_buffer[i] = displacements_buffer[i-1] + send_receive_count_buffer[i-1];
     }
 
-    /**
-    #if DEBUG
-    printf("R: %d, Should Receive: %d attributes\n", my_rank, send_receive_count_buffer[my_rank]);
-    if (my_rank == 0)
-        printf("Total attributes: %d\n", num_data_points * num_attributes);
-    #endif
-    **/
     MPI_Scatterv(data_points_send_buffer, send_receive_count_buffer, displacements_buffer, MPI_FLOAT,
                  data_points_receive_buffer, send_receive_count_buffer[my_rank], MPI_FLOAT, 0, MPI_COMM_WORLD);
-    /**
-     #if DEBUG
-     MPI_Barrier(MPI_COMM_WORLD);
-     printf("Rank: %d, Received: %d attributes\n", my_rank, *num_my_data_points * num_attributes);
-     #endif
-    **/
+
     // assign data points
     (*my_raw_data_points) = (RawDataPoint*) malloc(sizeof(RawDataPoint) * (*num_my_data_points));
     (*my_data_points) = (ClusterDataPoint*) malloc(sizeof(ClusterDataPoint) * (*num_my_data_points));
@@ -323,19 +311,6 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
             clusters[i].centroid.attributes[j] /= points_per_cluster_receive_buffer[i];
     }
 
-    /**
-    #if DEBUG
-    if (my_rank == 0){
-        printf("Rank: %d\n", my_rank);
-        for (int c = 0; c < num_clusters; c++){
-        printf("new cluster %d:\n\t", c);
-        for (int i = 0 ; i < num_attributes; i++)
-            printf("%f ", clusters[c].centroid.attributes[i]);
-        printf("\n");
-        }
-    }
-    #endif
-    **/
     free(clusters_send_buffer);
     free(clusters_receive_buffer);
     free(points_per_cluster_receive_buffer);
