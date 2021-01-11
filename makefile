@@ -26,4 +26,4 @@ run_serial : serial.o
 	     ./serial.o $(filename) $(num_clusters)
 
 clean :
-	rm $(target)
+	rm $(target) serial.o
