@@ -61,11 +61,23 @@ int main(int argc, char** argv)
   
  finish = clock(); 
  double elapsed = (double)(finish - start)/CLOCKS_PER_SEC;
+ 
+ int *clusters_id = (int*) malloc(sizeof(int)*num_data_points);
+ for(int i = 0; i < num_data_points; i++) clusters_id[i] = my_data_points[i].cluster_id;
+ 
+ char *clusters_filename = "serialClusters.txt";
+ 
+ printMyData(clusters_filename,clusters_id,num_data_points);
+ 
+ free(clusters_id);
+ 
  char *result = "serialResult.txt";
- printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
+ printf("Result obtained with %d iterations\n",num_iterations);
+ printf("Final centroids written in %s, clusters_id of points written in %s\n",result,clusters_filename);
  printf("Elapsed time: %e seconds\n",elapsed);
  printResult(result,clusters,num_clusters,num_attributes);
     
+ 
  // free cluster memory
  for (int i = 0; i < num_clusters; i++)
     free(clusters[i].centroid.attributes);
