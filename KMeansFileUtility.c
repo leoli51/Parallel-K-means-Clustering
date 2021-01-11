@@ -110,6 +110,32 @@ int parseFile(const char* filename,int* data_points_size, int* attributes_size, 
  return 0;
 }
 
+int printMyData(char *filename, int* clusters_id, int num_points)
+{
+  int fd = open(filename,O_WRONLY | O_RDONLY | O_CREAT | O_TRUNC,0666);
+  if(fd == -1)
+   {
+     printf("There was an error in trying to open the file\n");
+     return -1;
+   }
+  char *buffer = malloc(MAX_INTEGER_LENGTH+1);
+  for(int i = 0; i < num_points; i++)
+   {
+     memset(buffer,0,MAX_INTEGER_LENGTH+1);
+     if(snprintf(buffer,MAX_INTEGER_LENGTH+1,"%d\n",clusters_id[i]) == -1)
+          {
+            printf("snprintf failure in printMyData()\n");
+            return -1;
+          }
+     write(fd,buffer,strlen(buffer));
+   }
+  if(close(fd) == -1) { printf("Error in closing the file in printResult()\n"); return -1; }
+  return 0;
+}
+
+
+
+
 /**
 Funzione che scrive i centroidi finali dei cluster nel file filename
 **/

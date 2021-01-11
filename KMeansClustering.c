@@ -13,13 +13,14 @@
 
 #include <unistd.h>
 
+int gatherDataPoint(int my_rank, ClusterDataPoint* my_points, int num_my_points, int comm_size, int num_data_points);
+
 int main(int argc, char** argv){
     // Standard MPI code
     int communicator_size;
     int my_rank;
-
+    printf("\n");
     MPI_Init(NULL, NULL);
-
     MPI_Comm_size(MPI_COMM_WORLD, &communicator_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
@@ -100,6 +101,9 @@ int main(int argc, char** argv){
     local_finish = MPI_Wtime();
     local_elapsed = local_finish - local_start;
     MPI_Reduce(&local_elapsed,&elapsed,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
+    
+       
+    gatherDataPoint(my_rank, my_data_points, num_my_data_points, communicator_size, num_data_points);
    
     if(my_rank == 0) //put the result in a file
      {
@@ -132,7 +136,28 @@ int main(int argc, char** argv){
 }
 
 
-
+int gatherDataPoint(int my_rank, ClusterDataPoint* my_points, int num_my_points, int comm_size, int num_data_points)
+{
+  int *clusters_id = (int*) malloc(sizeof(int)*num_my_points);
+  char *filename = "clusterization.txt";
+  for(int i = 0 ; i < num_my_points; i++) clusters_id[i] = my_points[i].cluster_id;
+  int *rcv_clusters_id = NULL, *recv = NULL;
+  if (my_rank == 0) 
+   {
+     rcv_clusters_id = (int*) malloc(sizeof(int)*num_data_points);
+     recv = (int*) malloc(sizeof(int)*comm_size);
+     recv[0] = num_my_points;
+     int remaining = num_data_points % comm_size;
+     for(int i = 1 ; i < comm_size; i++)
+       if (remaining-- > 0) displacement[i] = num_my_points + 1;
+   }
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Gatherv(clusters_id, num_my_points, MPI_INT, rcv_clusters_id, recv, MPI_INT, 0, MPI_COMM_WORLD);
+  
+  if(my_rank == 0) { printMyData(filename, rcv_clusters_id, num_data_points); free(rcv_clusters_id); }
+  free(displacement);
+  free(clusters_id);
+}
 
 
 /**
