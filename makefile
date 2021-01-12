@@ -2,10 +2,10 @@ run = mpirun
 compiler = mpicc
 target = kmeans.o
 processes = 3
-src = $(filter-out SerialKMeansClustering.c, $(wildcard *.c))
+src = $(filter-out KMeansMPClustering.c, $(filter-out SerialKMeansClustering.c, $(wildcard *.c)))
 libs  = #-lkernel32 -luser32 -lgdi32 -lopengl32
 cflags = #-Wall
-filename = datasets/cloud_test.txt
+filename = datasets/10milions.txt
 num_clusters = 3
 
 .PHONY : clean
@@ -24,6 +24,13 @@ serial.o : SerialKMeansClustering.c
 
 run_serial : serial.o
 	     ./serial.o $(filename) $(num_clusters)
+
+omp_kmeans.o : KMeansMPClustering.c
+	   gcc -Wall KMeansMPClustering.c -o omp_kmeans.o -fopenmp
+
+run_omp : omp_kmeans.o
+		./omp_kmeans.o $(filename) $(num_clusters)
+		rm omp_kmeans.o
 
 clean :
 	rm $(target) serial.o

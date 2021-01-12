@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "mpi.h"
-#include <omp.h>
 #include "KMeansClusteringDefs.h"
 #include "KMeansFileUtility.h"
 #include "KMeansMPIUtils.h"
