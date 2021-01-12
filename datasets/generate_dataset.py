@@ -6,8 +6,12 @@ import argparse
 import random
 import time
 
+#minimum and maximum float to generate
+start = -1000
+stop = 1000
+
 def generate_uniform(num_points, num_attributes):
-    return [[random.random() for a in range(num_attributes)] for i in range(num_points)]
+    return [[random.uniform(start,stop) for a in range(num_attributes)] for i in range(num_points)]
 
 def generate_clouds(num_points, num_attributes, num_clouds):
     clouds = generate_uniform(num_clouds, num_attributes)
