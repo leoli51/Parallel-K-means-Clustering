@@ -15,17 +15,21 @@ int smartParseFile(const char* filename,int* data_points_size, int* attributes_s
 int assignPointsToNearestClusterSerial(void *void_args);
 //ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int start, int stop ,int num_clusters,_Bool* hasChanged
 
-struct params
-{
-  int start;
-  int stop;
-};
-
 ClusterDataPoint* my_data_points;
 Cluster *clusters;
-pthread_mutex_t lock;
+
+//syncrhonizations
+pthread_mutex_t lock; //lock on hasChanged
+pthread_mutex_t *clusters_lock;
+
+pthread_barrier_t barrierMemset,barrierCentroids;
+
 _Bool hasChanged = 0;
-int num_attributes,num_clusters,num_data_points, data_per_thread = 64;
+_Bool hasMemsetted = 0;
+_Bool hasUpdatedCentroids = 0;
+int num_iterations = 0;
+int num_attributes,num_clusters,num_data_points, data_per_thread, num_thread = 8;
+
 
 int main(int argc, char** argv)
 {
@@ -43,7 +47,7 @@ int main(int argc, char** argv)
   if(num_clusters <= 1) { printf("Too few clusters, you should use a minimum of 2 clusters\n"); return -1; }
   if(smartParseFile(filename, &num_data_points, &num_attributes, &my_data_points) == -1) return -1;
   if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; } //TODO inserire il controllo in parseFile è meglio
-  
+ 
   start_t = clock();
   
   // initialize clusters as empty
@@ -57,36 +61,26 @@ int main(int argc, char** argv)
  
   
   //do work
-  int num_thread = num_data_points/data_per_thread;
+  data_per_thread = num_data_points/num_thread;
+  pthread_barrier_init(&barrierMemset,NULL,num_thread);
+  pthread_barrier_init(&barrierCentroids,NULL,num_thread);
+  printf("We have %d threads in total\n",num_thread);
   if(num_thread == 0) num_thread = 1;
   pthread_t threads[num_thread];
-  int num_iterations = 0,start;
-  struct params *threadparam[num_thread];
-  do
-  {
-    hasChanged = 0;
-    num_iterations++;
-    for(int th = 0 ; th < num_thread; th++)
+  int start;
+  for(int th = 0 ; th < num_thread; th++)
       {
-       /**
-       threadparam[th] = malloc(sizeof(struct params));
-       threadparam[th]->num_attributes = num_attributes;
-       threadparam[th]->start = th*data_per_thread;
-       if(th != num_thread -1) threadparam[th]->stop = (th*data_per_thread)+16;
-       else threadparam[th]->stop = num_data_points;
-       **/
        start = th * data_per_thread;
        pthread_create(&threads[th],NULL,(void*)assignPointsToNearestClusterSerial,(void*)start);
-       //free(threadparam[th]);
       }
-    for(int th = 0; th < num_thread; th++) pthread_join(threads[th],NULL);
-    //assignPointsToNearestClusterSerial(my_data_points, clusters, num_attributes, num_data_points, num_clusters, &hasChanged);
-    updateClusters(my_data_points, clusters, num_attributes, num_data_points, num_clusters);
-    
-  }while(hasChanged && (max_iterations <= 0 || num_iterations < max_iterations));
+  for(int th = 0; th < num_thread; th++) pthread_join(threads[th],NULL);
 
  finish = clock(); 
+ 
  pthread_mutex_destroy(&lock);
+ pthread_barrier_destroy(&barrierMemset);
+ pthread_barrier_destroy(&barrierCentroids);
+ 
  double elapsed = (double)(finish - start_t)/CLOCKS_PER_SEC;
  
  int *clusters_id = (int*) malloc(sizeof(int)*num_data_points);
@@ -104,7 +98,6 @@ int main(int argc, char** argv)
  printf("Elapsed time: %e seconds\n",elapsed);
  printResult(result,clusters,num_clusters,num_attributes);
     
- 
  // free cluster memory
  for (int i = 0; i < num_clusters; i++)
     free(clusters[i].centroid.attributes);
@@ -122,43 +115,56 @@ int main(int argc, char** argv)
 int assignPointsToNearestClusterSerial(void* void_args)
 {
   int start = (int) void_args,stop = start+data_per_thread;
+  int thread_id = start/data_per_thread;
   if(stop > num_data_points) stop = num_data_points;
-  else if(start/data_per_thread == (num_data_points/data_per_thread)-1) stop = num_data_points;
+  else if(thread_id == (num_data_points/data_per_thread)-1) stop = num_data_points;
   int i,j,n_attr,cluster_index;
   //int start = args->start, stop = args->stop, num_attributes = args->num_attributes, num_clusters = args->num_clusters;
   float distance,min_distance,temp;
   ClusterDataPoint point;
   Cluster cluster;
-  for(i = start; i < stop; i++) //for every point to analyze
-   {
-     point = my_data_points[i]; //take a point
-     for(j = 0; j < num_clusters; j++) //for every cluster
+  do{
+     pthread_barrier_wait(&barrierMemset);
+     hasChanged = 0;
+     if(thread_id == 0)
+       num_iterations++;
+     pthread_barrier_wait(&barrierMemset);
+     for(i = start; i < stop; i++) //for every point to analyze
       {
-        distance = 0;
-        cluster = clusters[j]; //take a cluster
- 	for(n_attr = 0; n_attr < num_attributes; n_attr++) //calculate the distance between the point and the cluster
- 	 {
- 	   temp = (point.data_point.attributes[n_attr] - cluster.centroid.attributes[n_attr]);
- 	   distance += temp * temp;
- 	 }
- 	if(j == 0 || distance < min_distance) //if it is the first cluster or it is the nearest up to now
- 	{
- 	  min_distance = distance; //consider it as the nearest
- 	  cluster_index = j;
- 	}
+        point = my_data_points[i]; //take a point
+        for(j = 0; j < num_clusters; j++) //for every cluster
+         {
+           distance = 0;
+           cluster = clusters[j]; //take a cluster
+ 	   for(n_attr = 0; n_attr < num_attributes; n_attr++) //calculate the distance between the point and the cluster
+ 	    {
+ 	      temp = (point.data_point.attributes[n_attr] - cluster.centroid.attributes[n_attr]);
+ 	      distance += temp * temp;
+ 	    }
+ 	   if(j == 0 || distance < min_distance) //if it is the first cluster or it is the nearest up to now
+ 	   {
+ 	     min_distance = distance; //consider it as the nearest
+ 	     cluster_index = j;
+ 	   }
+        }
+        if(my_data_points[i].cluster_id != cluster_index)
+         {
+           my_data_points[i].cluster_id = cluster_index; //assign the nearest cluster to the point
+           if(!hasChanged)
+            {
+             pthread_mutex_lock(&lock);
+             hasChanged = 1;
+             pthread_mutex_unlock(&lock);
+            }
+         }
       }
-     if(my_data_points[i].cluster_id != cluster_index)
-      {
-        my_data_points[i].cluster_id = cluster_index; //assign the nearest cluster to the point
-        pthread_mutex_lock(&lock);
-        hasChanged = 1;
-        pthread_mutex_unlock(&lock);
-      }
-   }
+     if(thread_id == 0) updateClusters(); 
+    pthread_barrier_wait(&barrierCentroids);
+   }while(hasChanged);
   return 0;
 }
 
-void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_attributes, int num_data_points, int num_clusters)
+void updateClusters()
 {
   float sums[num_clusters][num_attributes];
   int nums[num_clusters];
