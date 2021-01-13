@@ -105,31 +105,31 @@ int main(int argc, char** argv){
    
     if(my_rank == 0) //put the result in a file
      {
-        char *result = "result.txt";
+        char *result = "result.txt",*cluster_pos = "clusters.txt";
         printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
         printf("Elapsed time: %e seconds\n",elapsed);
         printResult(result,clusters,num_clusters,num_attributes);
-        printMyData("clusters.txt", clustered_points, num_data_points);
+        printMyData(cluster_pos, clustered_points, num_data_points);
      }
 
 
     //free memory
     free(num_points_per_cluster);
-    free(clustered_points);
-
+    if(my_rank==0) free(clustered_points);
+    
     // free cluster memory
     for (int i = 0; i < num_clusters; i++){
       free(clusters[i].centroid.attributes);
     }
     free(clusters);
-
+    
     // free data points.
     for (int i = 0; i < num_my_data_points; i++){
         free(my_raw_data_points[i].attributes);
     }
+   
     free(my_data_points);
     free(my_raw_data_points);
-
 
     MPI_Finalize();
     return 0; // Return correct status
@@ -164,9 +164,13 @@ int gatherDataPoint(int my_rank, ClusterDataPoint* my_points, int num_my_points,
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Gatherv(my_clustered_points_buffer, num_my_points, MPI_INT, clustered_points, num_data_points_per_worker, displacements, MPI_INT, 0, MPI_COMM_WORLD);
     
-    free(displacements);
-    free(num_data_points_per_worker);
+    if(my_rank == 0) 
+     {
+      free(displacements);
+      free(num_data_points_per_worker);
+     }
     free(my_clustered_points_buffer);
+   return 0;
 }
 
 
@@ -188,6 +192,7 @@ int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clu
     }
 
     free(cluster_buffer);
+  return 0;
     //MPI_Type_free(&mpi_cluster_buffer_type);
 }
 
@@ -259,9 +264,14 @@ int sendPoints( int my_rank, int communicator_size, int num_data_points, int num
     }
 
     free(data_points_receive_buffer);
-    free(data_points_send_buffer);
+    if(my_rank == 0) 
+     {
+      free(data_points_send_buffer);
+      free(displacements_buffer);
+     }
     free(send_receive_count_buffer);
-    free(displacements_buffer);
+  return 0;
+   
 }
 
 
@@ -300,6 +310,7 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
     free(clusters_send_buffer);
     free(clusters_receive_buffer);
     free(points_per_cluster_receive_buffer);
+    return 0;
 }
 
 
@@ -319,6 +330,7 @@ int updateLocalClusters(int my_rank, int num_attributes, int num_my_data_points,
             clusters[my_data_points[i].cluster_id].centroid.attributes[j] += my_data_points[i].data_point.attributes[j];
         }
     }
+   return 0;
 }
 
 
