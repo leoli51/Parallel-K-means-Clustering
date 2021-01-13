@@ -8,7 +8,6 @@
 #include "mpi.h"
 #include "KMeansClusteringDefs.h"
 #include "KMeansFileUtility.h"
-#include "KMeansMPIUtils.h"
 
 #include <unistd.h>
 
@@ -76,7 +75,6 @@ int main(int argc, char** argv){
     sendPoints(my_rank, communicator_size, num_data_points, num_attributes,
                &num_my_data_points,
                raw_data_points, &my_raw_data_points, &my_data_points);
-
     // do work
     _Bool hasChanged;
     int num_iterations = 0;
@@ -95,7 +93,7 @@ int main(int argc, char** argv){
       synchronizeClusters(my_rank, num_clusters, num_attributes, clusters, num_points_per_cluster); //we reduce the average to get new centroids for the clusters
       
     }while(max_iterations <=0 || num_iterations < max_iterations);
-   
+    
     local_finish = MPI_Wtime();
     local_elapsed = local_finish - local_start;
     MPI_Reduce(&local_elapsed,&elapsed,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
@@ -177,31 +175,21 @@ int gatherDataPoint(int my_rank, ClusterDataPoint* my_points, int num_my_points,
 SendClusters send to all the nodes in MPI the clusters and initialize the first i cluster's centroid to the first i datapoints
 **/
 int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clusters, RawDataPoint* raw_data_points){
-    // initialize cluster buffer
-    float** cluster_buffer = (float**) malloc(num_clusters*sizeof(float*));
-    for (int i = 0; i < num_clusters; i++){
-        cluster_buffer[i] = (float*) malloc(sizeof(float) * num_attributes);
-        if (my_rank == 0){
-            for (int j = 0; j < num_attributes; j++){
-                cluster_buffer[i][j] = raw_data_points[i].attributes[j];
-            }
-        }
-      }
-
-    // create MPI datatype
-    MPI_Datatype mpi_cluster_buffer_type;
-    buildMPIPointBufferType(&mpi_cluster_buffer_type, num_attributes, cluster_buffer[1] - cluster_buffer[0], num_clusters);
-    MPI_Type_commit(&mpi_cluster_buffer_type);
-
-    MPI_Bcast(*cluster_buffer, 1, mpi_cluster_buffer_type, 0, MPI_COMM_WORLD);
-
-    // assign buffer attributes to cluster struct
-    for (int i = 0; i < num_clusters; i++){
-        clusters[i].centroid.attributes = cluster_buffer[i];
+    float *cluster_buffer = (float*) malloc(num_clusters*num_attributes*sizeof(float));
+    if(my_rank == 0)
+     for(int i = 0; i < num_clusters; i++)
+      for(int j = 0; j < num_attributes; j++)
+        cluster_buffer[(i*num_clusters)+j] = raw_data_points[i].attributes[j];
+        
+    MPI_Bcast(cluster_buffer, num_clusters*num_attributes, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    for (int i = 0; i < num_clusters; i++)
+    {
+        clusters[i].centroid.attributes = malloc(sizeof(float)*num_attributes);
+        for(int attr = 0; attr < num_attributes; attr++) clusters[i].centroid.attributes[attr] = cluster_buffer[(i*num_clusters)+attr];
     }
 
     free(cluster_buffer);
-    MPI_Type_free(&mpi_cluster_buffer_type);
+    //MPI_Type_free(&mpi_cluster_buffer_type);
 }
 
 
@@ -348,7 +336,6 @@ int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters
   ClusterDataPoint point;
   Cluster cluster;
   for(i = 0; i < num_clusters ; i++) num_points_per_cluster[i] = 0;
-  #pragma omp parallel for
   for(i = 0; i < my_raw_data_num; i++) //for every point to analyze
    {
      point = my_raw_data[i]; //take a point
@@ -369,7 +356,7 @@ int assignPointsToNearestCluster(ClusterDataPoint* my_raw_data,Cluster* clusters
       }
      if(my_raw_data[i].cluster_id != cluster_index)
       {
-        my_raw_data[i].cluster_id = cluster_index; //assign the nearest cluster to the point TODO (my_raw_data[i] sostitiuibile da point?) -> probabilmente no
+        my_raw_data[i].cluster_id = cluster_index; //assign the nearest cluster to the point 
         *hasChanged = 1;
       }
      num_points_per_cluster[cluster_index] += 1;

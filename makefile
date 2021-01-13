@@ -1,13 +1,12 @@
 run = mpirun
 compiler = mpicc
 target = kmeans.o
-processes = 3
+processes = 8
 src = $(filter-out KMeansMPClustering.c, $(filter-out SerialKMeansClustering.c, $(wildcard *.c)))
 libs  = #-lkernel32 -luser32 -lgdi32 -lopengl32
 cflags = #-Wall
-filename = datasets/10milions.txt
-num_clusters = 3
-
+filename = datasets/centomila2.txt
+num_clusters = 2
 .PHONY : clean
 
 $(target): $(src)
