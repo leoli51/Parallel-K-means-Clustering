@@ -8,7 +8,7 @@
 #include "mpi.h"
 #include "KMeansClusteringDefs.h"
 #include "KMeansFileUtility.h"
-
+#include <omp.h>
 #include <unistd.h>
 
 
@@ -43,7 +43,7 @@ int main(int argc, char** argv){
         if(parseArgs(argc, argv, &filename, &num_clusters, &max_iterations) == -1) return -1;
         if(num_clusters <= 1) { printf("Too few clusters, you should use a minimum of 2 clusters\n"); return -1; }
         if(parseFile(filename, &num_data_points, &num_attributes, &raw_data_points) == -1) return -1;
-        if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; } //TODO inserire il controllo in parseFile è meglio
+        if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; } 
 
     }
 
@@ -93,7 +93,6 @@ int main(int argc, char** argv){
       synchronizeClusters(my_rank, num_clusters, num_attributes, clusters, num_points_per_cluster); //we reduce the average to get new centroids for the clusters
       
     }while(max_iterations <=0 || num_iterations < max_iterations);
-    
     local_finish = MPI_Wtime();
     local_elapsed = local_finish - local_start;
     MPI_Reduce(&local_elapsed,&elapsed,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
