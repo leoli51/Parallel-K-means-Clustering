@@ -65,7 +65,7 @@ int parseFile(const char* filename,int* data_points_size, int* attributes_size, 
   FILE *file = fopen(filename,"r");
   if(file == NULL)
    {
-     printf("There was an error in trying to open the file\n");
+     printf("There was an error in trying to open the file in parseFile()\n");
      return -1;
    }
   char* firstRowBuffer = malloc(sizeof(char)*((MAX_INTEGER_LENGTH*2)+2));
@@ -115,7 +115,7 @@ int printMyData(char *filename, int* clusters_id, int num_points)
   int fd = open(filename,O_WRONLY | O_RDONLY | O_CREAT | O_TRUNC,0666);
   if(fd == -1)
    {
-     printf("There was an error in trying to open the file\n");
+     printf("There was an error in trying to open the file in printMyData()\n");
      return -1;
    }
   char *buffer = malloc(MAX_INTEGER_LENGTH+1);
@@ -144,7 +144,7 @@ int printResult(char *filename,Cluster* clusters, int num_clusters, int num_attr
   int fd = open(filename,O_WRONLY | O_CREAT| O_TRUNC,0666);
   if(fd == -1)
    {
-     printf("There was an error in trying to open the file\n");
+     printf("There was an error in trying to open the file in printResult()\n");
      return -1;
    }
   char *buffer = malloc(MAX_FLOAT_LENGTH+1);
