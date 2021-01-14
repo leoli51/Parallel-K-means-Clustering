@@ -1,64 +1,31 @@
 # K-means clusetering with OpenMPI and OpenMP/Pthread
 
-## conventions
+## Generazione di dataset 
 
-Usiamo lo stile di MPI per le funzioni (?):
-tutte le funzioni restituiscono un intero che rappresenta lo stato 
-i parametri che devono essere modificati vengono passati come pointer
+Per testare il programma abbiamo creato uno script python che genera dei dataset di punti. Per generare un dataset il comando da dare è il seguente:
 
-Camel case metodi: parseFile();<br>
-Snake case variabili: raw_data_point;<br>
+```bash 
+python3 datasets/generate_dataset.py num_punti num_attributi nome_file
 
-nomi descrittivi
+# dataset con 100000 punti e 2 attributi
+python3 datasets/generate_dataset.py 100000 2 datasets/centomila_2.txt
+```
+## Utilizzo
 
-## datatypes
+Per settare i parametri del programma si utilizzano le variabili scritte all'inizio del makefile:<br>
+  * processes = numero di processi/thread
+  * dataset = dataset su cui lavorare
+  * num_clusters = numero di cluster
 
-numero cluster : int
-[numero massimo iterazioni : int]
+per lanciare il programma una volta settate le variabili si usano i seguenti comandi:
 
-struct cluster-data-point
-    - cluster id : int
-    - data point : raw-data-point
+```bash 
+make run_serial   # esegue la versione seriale
+make run_mpi      # esegue la versione OpenMPI
+make run_omp      # esegue la versione OpenMP
+make run_pthread  # esegue la versione pthread
 
-struct raw-data-point
-    - attributi : float*
+make clean         # rimuove i file eseguibili
+make clean_results # rimuove i file .txt con i risultati
+```
 
-struct cluster
-    - cluster id : int
-    - centroide : (raw-data-point)
-
-## scheletro algoritmo
-
-1. parsing del file
-2. inizializzazione cluster
-3. distribuire i data-point alle varie macchine
-4. analisi data-point proprietari e assegnazione cluster
-5. calcolo centroide locale
-6. calcolo centroide distrubuito
-7. ripeti dal punto 4 se ci sono state modifiche ai cluster
-8. output
-
-## 1
-
-Prima linea: numero_di_data_point numero_di_attributi
-Altre linee: linee contenenti attributi separati da spazi. Ogni linea è un data point.
-
-Master esegue il parsing del file.
-
-## 2
-
-Crea i cluster gli assegna punti a caso e li distribuisce come array di cluster.
-
-## 3
-
-distribuisce i dati in maniera equa.
-Distribuisce come array di raw-data-points.
-
-## 4
-
-Ogni macchina analizza la sua parte di data-points e assegna un cluster a ciascuno. 
-Ottimizzazioe locale con openMP / PThread.
-
-## 5 
-
-Calcolo centroide locale 

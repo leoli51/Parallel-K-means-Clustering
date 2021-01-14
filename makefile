@@ -1,35 +1,38 @@
-run = mpirun
-compiler = mpicc
-target = kmeans.o
 processes = 2
-libs  = #-lkernel32 -luser32 -lgdi32 -lopengl32
-cflags = #-Wall
-filename = datasets/milione2.txt
+dataset = datasets/mille.txt
 num_clusters = 2
 
 .PHONY : clean
 
-$(target): KMeansClustering.c KMeansFileUtility.c
-	$(compiler) -o $@ $^ $(cflags) $(libs)
+mpi_kmeans.o : KMeansClustering.c KMeansFileUtility.c
+	mpicc -o $@ $^
 
-run_local : $(target)
-	$(run) -np $(processes) --oversubscribe -mca btl_base_warn_component_unused 0 ./$(target) $(filename) $(num_clusters)
+run_mpi : mpi_kmeans.o
+	mpirun -np $(processes) --oversubscribe -mca btl_base_warn_component_unused 0 ./mpi_kmeans.o $(dataset) $(num_clusters)
 
-run_distributed : $(target)
-	$(run) -np $(processes) --oversubscribe --host node1,node2,node3 --mca btl_base_warn_component_unused 0 ./$(target) $(filename) $(num_clusters)
+#run_distributed : $(target)
+#	mpirun -np $(processes) --oversubscribe --host node1,node2,node3 --mca btl_base_warn_component_unused 0 ./$mpi_kmeans.o $(dataset) $(num_clusters)
 
-serial.o : SerialKMeansClustering.c
-	   gcc -Wall SerialKMeansClustering.c -o serial.o
+serial_kmeans.o : SerialKMeansClustering.c
+	   gcc -Wall SerialKMeansClustering.c -o serial_kmeans.o
 
-run_serial : serial.o
-	     ./serial.o $(filename) $(num_clusters)
+run_serial : serial_kmeans.o
+	     ./serial_kmeans.o $(dataset) $(num_clusters)
 
 omp_kmeans.o : KMeansMPClustering.c
 	   gcc -Wall KMeansMPClustering.c -o omp_kmeans.o -fopenmp
 
 run_omp : omp_kmeans.o
-		./omp_kmeans.o $(filename) $(num_clusters)
-		rm omp_kmeans.o
+		./omp_kmeans.o $(dataset) $(num_clusters)
+
+pthread_kmeans.o : PThreadKmeansClustering.c KMeansFileUtility.c
+		gcc -Wall PThreadKmeansClustering.c KMeansFileUtility.c -o pthread_kmeans.o -pthread
+
+run_pthread : pthread_kmeans.o
+		./pthread_kmeans.o $(processes) $(dataset) $(num_clusters)
 
 clean :
-	rm $(target) serial.o
+	rm *.o
+
+clean_results :
+	rm *.txt
