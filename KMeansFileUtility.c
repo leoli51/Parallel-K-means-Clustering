@@ -110,6 +110,9 @@ int parseFile(const char* filename,int* data_points_size, int* attributes_size, 
  return 0;
 }
 
+/**
+printMyData writes in filename a line for every point where in the i-th line there is the cluster_id of point i
+**/
 int printMyData(char *filename, int* clusters_id, int num_points)
 {
   int fd = open(filename,O_WRONLY | O_RDONLY | O_CREAT | O_TRUNC,0666);
@@ -118,12 +121,11 @@ int printMyData(char *filename, int* clusters_id, int num_points)
      printf("There was an error in trying to open the file in printMyData()\n");
      return -1;
    }
-  char buffer[MAX_INTEGER_LENGTH*5];
+  char buffer[MAX_INTEGER_LENGTH];
   for(int i = 0; i < num_points; i++)
    {
-     for(int s = 0; s < MAX_INTEGER_LENGTH+2 ; s++) buffer[i] = 0;
-     //printf("iteration %d after inizialitation clusters_id[i] = %d\n",i,clusters_id[i]);
-     if(snprintf(buffer,MAX_INTEGER_LENGTH+2,"%d\n",clusters_id[i]) == -1)
+     for(int s = 0; s < MAX_INTEGER_LENGTH ; s++) buffer[s] = 0;
+     if(snprintf(buffer,MAX_INTEGER_LENGTH,"%d\n",clusters_id[i]) == -1)
           {
             printf("snprintf failure in printMyData()\n");
             return -1;

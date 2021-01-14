@@ -61,18 +61,19 @@ int main(int argc, char** argv)
   
   //do work
   data_per_thread = num_data_points/num_thread;
+  
   pthread_barrier_init(&barrierMemset,NULL,num_thread);
   pthread_barrier_init(&barrierCentroids,NULL,num_thread);
-  printf("We have %d threads in total\n",num_thread);
-  if(num_thread == 0) num_thread = 1;
+  
+  if(num_thread <= 0) num_thread = 1;
   pthread_t threads[num_thread];
   int start;
-  for(int th = 0 ; th < num_thread; th++)
+  for(int th = 0 ; th < num_thread; th++) //launch every thread to analyze a portion of data
       {
        start = th * data_per_thread;
        pthread_create(&threads[th],NULL,(void*)assignPointsToNearestClusterSerial,(void*)start);
       }
-  for(int th = 0; th < num_thread; th++) pthread_join(threads[th],NULL);
+  for(int th = 0; th < num_thread; th++) pthread_join(threads[th],NULL); //joins
 
  finish = clock(); 
  
@@ -86,16 +87,18 @@ int main(int argc, char** argv)
  for(int i = 0; i < num_data_points; i++) clusters_id[i] = my_data_points[i].cluster_id;
  
  char *clusters_filename = "threadClusters.txt";
+ char *result = "threadResult.txt";
  
+ printResult(result,clusters,num_clusters,num_attributes);
  printMyData(clusters_filename,clusters_id,num_data_points);
  
  free(clusters_id);
  
- char *result = "threadResult.txt";
+ 
  printf("Result obtained with %d iterations\n",num_iterations);
  printf("Final centroids written in %s, clusters_id of points written in %s\n",result,clusters_filename);
  printf("Elapsed time: %e seconds\n",elapsed);
- //printResult(result,clusters,num_clusters,num_attributes);
+ 
  
  // free cluster memory
  for (int i = 0; i < num_clusters; i++)
@@ -111,23 +114,24 @@ int main(int argc, char** argv)
  return 0;
 }
 
+
 int assignPointsToNearestClusterSerial(void* void_args)
 {
-  int start = (int) void_args,stop = start+data_per_thread;
-  int thread_id = start/data_per_thread;
-  if(stop > num_data_points) stop = num_data_points;
-  else if(thread_id == (num_data_points/data_per_thread)-1) stop = num_data_points;
+  int start = (int) void_args,stop = start+data_per_thread; //every thread has its start point for the data and calculates his end point
+  int thread_id = start/data_per_thread; //we get the thread_id that goes from 0 to num_thread-1
+  if(stop > num_data_points) stop = num_data_points; //make sure we don't surpass num_data_points
+  else if(thread_id == (num_data_points/data_per_thread)-1) stop = num_data_points; //the last thread takes up to the last point
   int i,j,n_attr,cluster_index;
-  //int start = args->start, stop = args->stop, num_attributes = args->num_attributes, num_clusters = args->num_clusters;
   float distance,min_distance,temp;
   ClusterDataPoint point;
   Cluster cluster;
+  //do work
   do{
-     pthread_barrier_wait(&barrierMemset);
+     pthread_barrier_wait(&barrierMemset); //wait for other threads in order to make sure they entered the while
      hasChanged = 0;
      if(thread_id == 0)
        num_iterations++;
-     pthread_barrier_wait(&barrierMemset);
+     pthread_barrier_wait(&barrierMemset); //they start the for
      for(i = start; i < stop; i++) //for every point to analyze
       {
         point = my_data_points[i]; //take a point
@@ -149,7 +153,7 @@ int assignPointsToNearestClusterSerial(void* void_args)
         if(my_data_points[i].cluster_id != cluster_index)
          {
            my_data_points[i].cluster_id = cluster_index; //assign the nearest cluster to the point
-           if(!hasChanged)
+           if(!hasChanged) //if hasChanged is 0, change it to 1 using a mutex
             {
              pthread_mutex_lock(&lock);
              hasChanged = 1;
@@ -157,12 +161,13 @@ int assignPointsToNearestClusterSerial(void* void_args)
             }
          }
       }
-     if(thread_id == 0) updateClusters(); 
-    pthread_barrier_wait(&barrierCentroids);
+     if(thread_id == 0) updateClusters(); //thread 0 update centroids
+    pthread_barrier_wait(&barrierCentroids); //the others wait for him
    }while(hasChanged);
   return 0;
 }
 
+//function that updates the centroids of the clusters
 void updateClusters()
 {
   float sums[num_clusters][num_attributes];
@@ -174,14 +179,14 @@ void updateClusters()
        sums[i][j] = 0;
    }
   ClusterDataPoint point;
-  for(int dp = 0; dp < num_data_points; dp++)
+  for(int dp = 0; dp < num_data_points; dp++) 
     {
       point = my_data_points[dp];
       for(int attr = 0 ; attr < num_attributes; attr ++)
          sums[point.cluster_id][attr] += point.data_point.attributes[attr];
       nums[point.cluster_id] += 1;
     }
-  for(int c = 0; c < num_clusters; c++) 
+  for(int c = 0; c < num_clusters; c++) //make the average
      for(int i = 0; i < num_attributes; i++)
        if(nums[c] != 0) clusters[c].centroid.attributes[i] = sums[c][i] / nums[c];
        else clusters[c].centroid.attributes[i] = 0;
@@ -248,6 +253,7 @@ int smartParseFile(const char* filename,int* data_points_size, int* attributes_s
  return 0;
 }
 
+//parse the input
 int threadParseArgs(int argc, char** argv, char** filename, int* max_iterations)
 {
   if(argc<4)

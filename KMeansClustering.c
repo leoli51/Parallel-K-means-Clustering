@@ -97,15 +97,15 @@ int main(int argc, char** argv){
     }while(max_iterations <=0 || num_iterations < max_iterations);
     local_finish = MPI_Wtime();
     local_elapsed = local_finish - local_start;
-    MPI_Reduce(&local_elapsed,&elapsed,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
+    MPI_Reduce(&local_elapsed,&elapsed,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD); //get the maximum time of the processes
     
     int *clustered_points = NULL;
     if (my_rank == 0)
-        clustered_points = (int*) malloc(sizeof(int) * num_data_points);
+        clustered_points = (int*) malloc(sizeof(int) * num_data_points); //array where clustered_points[i] = j means point i has cluster j
 
-    gatherDataPoint(my_rank, my_data_points, num_my_data_points, communicator_size, num_data_points, clustered_points);
+    gatherDataPoint(my_rank, my_data_points, num_my_data_points, communicator_size, num_data_points, clustered_points); //we gather all the datapoints cluster id's in clustered_points of rank 0
    
-    if(my_rank == 0) //put the result in a file
+    if(my_rank == 0) //put the results in files
      {
         char *result = "result.txt",*cluster_pos = "clusters.txt";
         printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);

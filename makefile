@@ -4,7 +4,7 @@ target = kmeans.o
 processes = 2
 libs  = #-lkernel32 -luser32 -lgdi32 -lopengl32
 cflags = #-Wall
-filename = datasets/cento2.txt
+filename = datasets/milione2.txt
 num_clusters = 2
 
 .PHONY : clean
