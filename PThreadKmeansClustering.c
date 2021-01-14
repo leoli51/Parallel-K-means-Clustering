@@ -45,7 +45,7 @@ int main(int argc, char** argv)
   if(threadParseArgs(argc, argv, &filename, &max_iterations) == -1) return -1;
   if(num_clusters <= 1) { printf("Too few clusters, you should use a minimum of 2 clusters\n"); return -1; }
   if(smartParseFile(filename, &num_data_points, &num_attributes, &my_data_points) == -1) return -1;
-  if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; } //TODO inserire il controllo in parseFile è meglio
+  if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; } 
  
   start_t = clock();
   
