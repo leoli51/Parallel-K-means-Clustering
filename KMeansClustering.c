@@ -110,8 +110,8 @@ int main(int argc, char** argv){
         char *result = "result.txt",*cluster_pos = "clusters.txt";
         printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
         printf("Elapsed time: %e seconds\n",elapsed);
-        //printResult(result,clusters,num_clusters,num_attributes);
-        //printMyData(cluster_pos, clustered_points, num_data_points);
+        printResult(result,clusters,num_clusters,num_attributes);
+        printMyData(cluster_pos, clustered_points, num_data_points);
      }
 
 
@@ -185,14 +185,15 @@ int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clu
      for(int i = 0; i < num_clusters; i++)
       for(int j = 0; j < num_attributes; j++)
         cluster_buffer[(i*num_attributes)+j] = raw_data_points[i].attributes[j];
-        
+  
     MPI_Bcast(cluster_buffer, num_clusters*num_attributes, MPI_FLOAT, 0, MPI_COMM_WORLD);
+     
     for (int i = 0; i < num_clusters; i++)
     {
         clusters[i].centroid.attributes = malloc(sizeof(float)*num_attributes);
-        for(int attr = 0; attr < num_attributes; attr++) clusters[i].centroid.attributes[attr] = cluster_buffer[(i*num_clusters)+attr];
+        for(int attr = 0; attr < num_attributes; attr++) clusters[i].centroid.attributes[attr] = cluster_buffer[(i*num_attributes)+attr];
     }
-
+    
     free(cluster_buffer);
   return 0;
 }
@@ -286,7 +287,9 @@ int synchronizeClusters(int my_rank, int num_clusters, int num_attributes, Clust
     // Allreduce new cluster values
     float* clusters_send_buffer = (float*) malloc(sizeof(float) * num_clusters * num_attributes);
     for (int i = 0; i < num_clusters; i++){
-        memcpy(&clusters_send_buffer[i * num_attributes], clusters[i].centroid.attributes, sizeof(float) * num_attributes);
+       for(int j = 0; j < num_attributes; j++)
+         clusters_send_buffer[(i*num_attributes)+j] = clusters[i].centroid.attributes[j];
+        //memcpy(&clusters_send_buffer[i * num_attributes], clusters[i].centroid.attributes, sizeof(float) * num_attributes);
     }
 
     float* clusters_receive_buffer = (float*) malloc(sizeof(float) * num_clusters * num_attributes);

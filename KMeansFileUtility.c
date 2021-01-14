@@ -121,7 +121,8 @@ int printMyData(char *filename, int* clusters_id, int num_points)
   char *buffer = malloc(MAX_INTEGER_LENGTH+1);
   for(int i = 0; i < num_points; i++)
    {
-     memset(buffer,0,MAX_INTEGER_LENGTH+1);
+     for(int s = 0; s < MAX_INTEGER_LENGTH+1 ; s++) buffer[i] = 0;
+     //memset(buffer,0,MAX_INTEGER_LENGTH+1);
      if(snprintf(buffer,MAX_INTEGER_LENGTH+1,"%d\n",clusters_id[i]) == -1)
           {
             printf("snprintf failure in printMyData()\n");
@@ -129,6 +130,7 @@ int printMyData(char *filename, int* clusters_id, int num_points)
           }
      write(fd,buffer,strlen(buffer));
    }
+  free(buffer);
   if(close(fd) == -1) { printf("Error in closing the file in printResult()\n"); return -1; }
   return 0;
 }
@@ -162,6 +164,7 @@ int printResult(char *filename,Cluster* clusters, int num_clusters, int num_attr
       }
      write(fd,"\n",strlen("\n"));
    }
+  free(buffer);
   if(close(fd) == -1) { printf("Error in closing the file in printResult()\n"); return -1; }
   return 0;
 }
