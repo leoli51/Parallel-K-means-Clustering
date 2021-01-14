@@ -2,8 +2,8 @@
 #ifndef K_MEANS_DATATYPES
 #define K_MEANS_DATATYPES
 
-#define MAX_INTEGER_LENGTH 20
-#define MAX_FLOAT_LENGTH 64
+#define MAX_INTEGER_LENGTH 100
+#define MAX_FLOAT_LENGTH 128
 #define DEBUG 1
 
 typedef struct {

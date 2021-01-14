@@ -99,7 +99,7 @@ int main(int argc, char** argv){
     local_elapsed = local_finish - local_start;
     MPI_Reduce(&local_elapsed,&elapsed,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
     
-    int* clustered_points = NULL;
+    int *clustered_points = NULL;
     if (my_rank == 0)
         clustered_points = (int*) malloc(sizeof(int) * num_data_points);
 
@@ -113,7 +113,6 @@ int main(int argc, char** argv){
         printResult(result,clusters,num_clusters,num_attributes);
         printMyData(cluster_pos, clustered_points, num_data_points);
      }
-
 
     //free memory
     free(num_points_per_cluster);

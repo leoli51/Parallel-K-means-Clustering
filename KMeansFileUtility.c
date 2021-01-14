@@ -118,19 +118,18 @@ int printMyData(char *filename, int* clusters_id, int num_points)
      printf("There was an error in trying to open the file in printMyData()\n");
      return -1;
    }
-  char *buffer = malloc(MAX_INTEGER_LENGTH+1);
+  char buffer[MAX_INTEGER_LENGTH*5];
   for(int i = 0; i < num_points; i++)
    {
-     for(int s = 0; s < MAX_INTEGER_LENGTH+1 ; s++) buffer[i] = 0;
-     //memset(buffer,0,MAX_INTEGER_LENGTH+1);
-     if(snprintf(buffer,MAX_INTEGER_LENGTH+1,"%d\n",clusters_id[i]) == -1)
+     for(int s = 0; s < MAX_INTEGER_LENGTH+2 ; s++) buffer[i] = 0;
+     //printf("iteration %d after inizialitation clusters_id[i] = %d\n",i,clusters_id[i]);
+     if(snprintf(buffer,MAX_INTEGER_LENGTH+2,"%d\n",clusters_id[i]) == -1)
           {
             printf("snprintf failure in printMyData()\n");
             return -1;
           }
      write(fd,buffer,strlen(buffer));
    }
-  //free(buffer);
   if(close(fd) == -1) { printf("Error in closing the file in printResult()\n"); return -1; }
   return 0;
 }
