@@ -50,7 +50,7 @@ int main(int argc, char** argv)
   float cluster_sums[num_clusters][num_attributes];
   int points_per_cluster[num_clusters];
 
-  #pragma omp parallel num_threads(4)
+  #pragma omp parallel num_threads(8)
   {
   do
   {
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 
     int local_cluster_changes = 0;
 
-    #pragma omp for schedule(static, 4)
+    #pragma omp for schedule(static, 8)
     for(int i = 0; i < num_data_points; i++) //for every point to analyze
     {
       float min_distance = -1;

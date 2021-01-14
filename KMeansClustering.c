@@ -13,6 +13,7 @@
 
 
 int main(int argc, char** argv){
+
     // Standard MPI code
     int communicator_size;
     int my_rank;
@@ -24,19 +25,20 @@ int main(int argc, char** argv){
     //timing values
     double local_start,local_finish,local_elapsed,elapsed;
 
-    // K-means
+    // K-means variables
     int num_data_points;
     int num_attributes;
     int num_clusters;
     int max_iterations = -1;
 
-
+    // arrays of datapoints and clusters
     Cluster* clusters;
     ClusterDataPoint* my_data_points;
     RawDataPoint* raw_data_points;
     RawDataPoint* my_raw_data_points;
     int num_my_data_points;
 
+    // master process parses the command line options and the file
     if (my_rank == 0){
         // parse file
         char* filename;
