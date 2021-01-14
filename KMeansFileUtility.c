@@ -130,7 +130,7 @@ int printMyData(char *filename, int* clusters_id, int num_points)
           }
      write(fd,buffer,strlen(buffer));
    }
-  free(buffer);
+  //free(buffer);
   if(close(fd) == -1) { printf("Error in closing the file in printResult()\n"); return -1; }
   return 0;
 }

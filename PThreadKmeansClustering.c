@@ -13,14 +13,13 @@ PThread K-Means Clustering
 void updateClusters();
 int smartParseFile(const char* filename,int* data_points_size, int* attributes_size, ClusterDataPoint** array_of_datapoints);
 int assignPointsToNearestClusterSerial(void *void_args);
-//ClusterDataPoint* my_raw_data,Cluster* clusters,int num_attributes,int start, int stop ,int num_clusters,_Bool* hasChanged
+int threadParseArgs(int argc, char** argv, char** filename, int* max_iterations);
 
 ClusterDataPoint* my_data_points;
 Cluster *clusters;
 
 //syncrhonizations
 pthread_mutex_t lock; //lock on hasChanged
-pthread_mutex_t *clusters_lock;
 
 pthread_barrier_t barrierMemset,barrierCentroids;
 
@@ -28,7 +27,7 @@ _Bool hasChanged = 0;
 _Bool hasMemsetted = 0;
 _Bool hasUpdatedCentroids = 0;
 int num_iterations = 0;
-int num_attributes,num_clusters,num_data_points, data_per_thread, num_thread = 8;
+int num_attributes,num_clusters,num_data_points, data_per_thread, num_thread;
 
 
 int main(int argc, char** argv)
@@ -43,7 +42,7 @@ int main(int argc, char** argv)
   
   // parse file
   char* filename;
-  if(parseArgs(argc, argv, &filename, &num_clusters, &max_iterations) == -1) return -1;
+  if(threadParseArgs(argc, argv, &filename, &max_iterations) == -1) return -1;
   if(num_clusters <= 1) { printf("Too few clusters, you should use a minimum of 2 clusters\n"); return -1; }
   if(smartParseFile(filename, &num_data_points, &num_attributes, &my_data_points) == -1) return -1;
   if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; } //TODO inserire il controllo in parseFile è meglio
@@ -96,8 +95,8 @@ int main(int argc, char** argv)
  printf("Result obtained with %d iterations\n",num_iterations);
  printf("Final centroids written in %s, clusters_id of points written in %s\n",result,clusters_filename);
  printf("Elapsed time: %e seconds\n",elapsed);
- printResult(result,clusters,num_clusters,num_attributes);
-    
+ //printResult(result,clusters,num_clusters,num_attributes);
+ 
  // free cluster memory
  for (int i = 0; i < num_clusters; i++)
     free(clusters[i].centroid.attributes);
@@ -247,4 +246,24 @@ int smartParseFile(const char* filename,int* data_points_size, int* attributes_s
      return -1;
    }
  return 0;
+}
+
+int threadParseArgs(int argc, char** argv, char** filename, int* max_iterations)
+{
+  if(argc<4)
+    {
+      printf("Usage of k-means: ./kmeans threads filename clusters_size [max_iterations]\n");
+      return -1;
+    }
+  num_thread = atoi(argv[1]);
+  *filename = argv[2];
+  num_clusters = atoi(argv[3]);
+
+  if(argc == 4) *max_iterations = -1;
+  else
+   {
+     int max = atoi(argv[3]);
+     max_iterations = &max;
+   }
+  return 0;
 }
