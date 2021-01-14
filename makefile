@@ -1,15 +1,15 @@
 run = mpirun
 compiler = mpicc
 target = kmeans.o
-processes = 8
-src = $(filter-out KMeansMPClustering.c, $(filter-out SerialKMeansClustering.c, $(wildcard *.c)))
+processes = 2
 libs  = #-lkernel32 -luser32 -lgdi32 -lopengl32
 cflags = #-Wall
 filename = datasets/centomila2.txt
 num_clusters = 2
+
 .PHONY : clean
 
-$(target): $(src)
+$(target): KMeansClustering.c KMeansFileUtility.c
 	$(compiler) -o $@ $^ $(cflags) $(libs)
 
 run_local : $(target)

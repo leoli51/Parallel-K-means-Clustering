@@ -110,8 +110,8 @@ int main(int argc, char** argv){
         char *result = "result.txt",*cluster_pos = "clusters.txt";
         printf("Result obtained with %d iterations and written in file %s\n",num_iterations,result);
         printf("Elapsed time: %e seconds\n",elapsed);
-        printResult(result,clusters,num_clusters,num_attributes);
-        printMyData(cluster_pos, clustered_points, num_data_points);
+        //printResult(result,clusters,num_clusters,num_attributes);
+        //printMyData(cluster_pos, clustered_points, num_data_points);
      }
 
 
@@ -184,7 +184,7 @@ int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clu
     if(my_rank == 0)
      for(int i = 0; i < num_clusters; i++)
       for(int j = 0; j < num_attributes; j++)
-        cluster_buffer[(i*num_clusters)+j] = raw_data_points[i].attributes[j];
+        cluster_buffer[(i*num_attributes)+j] = raw_data_points[i].attributes[j];
         
     MPI_Bcast(cluster_buffer, num_clusters*num_attributes, MPI_FLOAT, 0, MPI_COMM_WORLD);
     for (int i = 0; i < num_clusters; i++)
@@ -195,7 +195,6 @@ int sendClusters(int my_rank, int num_clusters, int num_attributes, Cluster* clu
 
     free(cluster_buffer);
   return 0;
-    //MPI_Type_free(&mpi_cluster_buffer_type);
 }
 
 
