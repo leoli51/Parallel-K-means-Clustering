@@ -1,4 +1,4 @@
-# K-means clusetering with OpenMPI and OpenMP/Pthread
+# K-means clustering with OpenMPI and OpenMP/Pthread
 
 ## Generazione di dataset 
 
