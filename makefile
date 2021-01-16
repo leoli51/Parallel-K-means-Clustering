@@ -20,7 +20,7 @@ run_serial : serial_kmeans.o
 	     ./serial_kmeans.o $(dataset) $(num_clusters)
 
 omp_kmeans.o : KMeansMPClustering.c
-	   gcc -Wall KMeansMPClustering.c -o omp_kmeans.o -fopenmp
+	   gcc -Wall -DNUM_THREADS=$(processes) KMeansMPClustering.c -o omp_kmeans.o -fopenmp
 
 run_omp : omp_kmeans.o
 		./omp_kmeans.o $(dataset) $(num_clusters)
