@@ -38,7 +38,6 @@ int main(int argc, char** argv)
   ClusterDataPoint* my_data_points = (ClusterDataPoint*) malloc(sizeof(ClusterDataPoint)*num_data_points);
   int num_iterations = 0;
 
-  //omp_set_num_threads(num_clusters);
   //#pragma omp parallel 
   // initialize clusters as empty
   //#pragma omp for
@@ -58,7 +57,7 @@ int main(int argc, char** argv)
   ClusterDataPoint point;
   Cluster cluster;
   _Bool hasChanged;
-  #pragma omp parallel num_threads(1) shared(max_iterations,hasChanged,sums,nums,my_data_points,num_iterations,clusters) firstprivate(num_attributes,num_data_points,num_clusters,raw_data_points) default(none)
+  #pragma omp parallel num_threads(NUM_THREADS) shared(max_iterations,hasChanged,sums,nums,my_data_points,num_iterations,clusters) firstprivate(num_attributes,num_data_points,num_clusters,raw_data_points) default(none)
   {
     // initialize ClusterDataPoint 
     #pragma omp for schedule(static,8)
