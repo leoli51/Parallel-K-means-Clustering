@@ -7,7 +7,6 @@ K-Means Clustering with Open MP
 #include "KMeansClusteringDefs.h"
 #include "KMeansFileUtility.c"
 #include <unistd.h>
-#include <time.h>
 #include <omp.h>
 
 void updateClusters(ClusterDataPoint* data_points, Cluster* clusters, int num_attributes, int num_data_points, int num_clusters,float* sums, int* nums);
@@ -22,7 +21,8 @@ int main(int argc, char** argv)
   int max_iterations = -1;
   
   //timing
-  clock_t start,finish;
+  //clock_t start,finish;
+  double start,finish;
   
   // parse file
   char* filename;
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
   if(parseFile(filename, &num_data_points, &num_attributes, &raw_data_points) == -1) return -1;
   if(num_clusters >= num_data_points) { printf("Too few datapoints, they should be more than the clusters\n"); return -1; }
   
-  start = clock();
+  start = omp_get_wtime();
   
   Cluster *clusters = (Cluster*) malloc(sizeof(Cluster) * num_clusters);
   ClusterDataPoint* my_data_points = (ClusterDataPoint*) malloc(sizeof(ClusterDataPoint)*num_data_points);
@@ -122,8 +122,8 @@ int main(int argc, char** argv)
    #pragma omp barrier
  }
 
- finish = clock(); 
- double elapsed = (double)(finish - start)/CLOCKS_PER_SEC;
+ finish = omp_get_wtime();
+ double elapsed = finish - start;
  
  int *clusters_id = (int*) malloc(sizeof(int)*num_data_points);
  for(int i = 0; i < num_data_points; i++) clusters_id[i] = my_data_points[i].cluster_id;

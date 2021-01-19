@@ -1,5 +1,5 @@
 processes = 2
-dataset = datasets/mille.txt
+dataset = datasets/milione2.txt
 num_clusters = 2
 
 .PHONY : clean
