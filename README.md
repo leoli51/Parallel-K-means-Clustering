@@ -1,31 +1,31 @@
 # K-means clustering with OpenMPI and OpenMP/Pthread
 
-## Generazione di dataset 
+## Dataset generation 
 
-Per testare il programma abbiamo creato uno script python che genera dei dataset di punti. Per generare un dataset il comando da dare è il seguente:
+To test the program we created a python script that generates datasets. A dataset is a collection of points. To generate a dataset you must run the following command in the terminal:
 
 ```bash 
-python3 datasets/generate_dataset.py num_punti num_attributi nome_file
+python3 datasets/generate_dataset.py num_points num_attributes/feature/dimension_of_space filename
 
-# dataset con 100000 punti e 2 attributi
+# dataset with 100000 points and 2 attributes (100000 points in 2d space)
 python3 datasets/generate_dataset.py 100000 2 datasets/centomila_2.txt
 ```
-## Utilizzo
+## How to use
 
-Per settare i parametri del programma si utilizzano le variabili scritte all'inizio del makefile:<br>
-  * processes = numero di processi/thread
-  * dataset = dataset su cui lavorare
-  * num_clusters = numero di cluster
+To set the parameters of the program you must change the variables at the beginning of the makefile:<br>
+  * processes = number of processes/threads
+  * dataset = dataset filename
+  * num_clusters = number of clusters
 
-per lanciare il programma una volta settate le variabili si usano i seguenti comandi:
+To execute the program, once all the desired parameters are set, you can use the following commands:
 
 ```bash 
-make run_serial   # esegue la versione seriale
-make run_mpi      # esegue la versione OpenMPI
-make run_omp      # esegue la versione OpenMP
-make run_pthread  # esegue la versione pthread
+make run_serial   # executes the serial version
+make run_mpi      # executes the OpenMPI version
+make run_omp      # executes the OpenMP version
+make run_pthread  # executes the pthread version
 
-make clean         # rimuove i file eseguibili
-make clean_results # rimuove i file .txt con i risultati
+make clean         # removes the executables (overall cleaning)
+make clean_results # removes the output .txt files containing the results
 ```
 
